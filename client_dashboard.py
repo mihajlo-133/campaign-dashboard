@@ -1,15 +1,14 @@
 """
 Multi-Client Email Campaign Dashboard
 
-Real-time performance monitor for Instantly and EmailBison workspaces.
+Real-time performance monitor for 6 Instantly and 2 EmailBison workspaces.
 Fetches live data, caches for 5 minutes, serves a single-page dashboard.
 
 Usage:
-  python client_dashboard.py             # port from $PORT or 8060
-  python client_dashboard.py --port 8061
+  python client_dashboard.py             # port 8060
+  PORT=8061 python client_dashboard.py   # custom port via env var
 """
 
-import argparse
 import json
 import os
 import re
@@ -20,6 +19,7 @@ import urllib.error
 import urllib.parse
 from datetime import datetime, timedelta, timezone
 from http.server import HTTPServer, BaseHTTPRequestHandler
+from pathlib import Path
 
 # ---------------------------------------------------------------------------
 # Constants — edit these to change behavior
@@ -40,7 +40,6 @@ KPI_TARGETS = {
     "Kayse":            {"sent": 2000,  "not_contacted": 2000,  "opps_per_day": 2.0,  "reply_rate": 1.5},
     "Prosperly":        {"sent": 2000,  "not_contacted": 2000,  "opps_per_day": 2.0,  "reply_rate": 1.5},
     "RankZero":         {"sent": 2000,  "not_contacted": 2000,  "opps_per_day": 2.0,  "reply_rate": 1.5},
-    "Enavra":           {"sent": 2000,  "not_contacted": 2000,  "opps_per_day": 2.0,  "reply_rate": 1.5},
     "SwishFunding (EB)":{"sent": 2000,  "not_contacted": 2000,  "opps_per_day": 2.0,  "reply_rate": 1.5},
 }
 
@@ -62,26 +61,26 @@ POOL_DAYS_WARN    = 7     # below 7 days of leads → amber
 
 CLIENTS = {
     # Instantly v2
-    "MyPlace":       {"platform": "instantly", "env_key": "INSTANTLY_MYPLACE"},
-    "SwishFunding":  {"platform": "instantly", "env_key": "INSTANTLY_SWISHFUNDING"},
-    "SmartMatchApp": {"platform": "instantly", "env_key": "INSTANTLY_SMARTMATCHAPP"},
-    "HeyReach":      {"platform": "instantly", "env_key": "INSTANTLY_HEYREACH"},
-    "Kayse":         {"platform": "instantly", "env_key": "INSTANTLY_KAYSE"},
-    "Prosperly":     {"platform": "instantly", "env_key": "INSTANTLY_PROSPERLY"},
-    "Enavra":        {"platform": "instantly", "env_key": "INSTANTLY_ENAVRA"},
+    "MyPlace":       {"platform": "instantly", "env_var": "INSTANTLY_KEY_MYPLACE"},
+    "SwishFunding":  {"platform": "instantly", "env_var": "INSTANTLY_KEY_SWISHFUNDING"},
+    "SmartMatchApp": {"platform": "instantly", "env_var": "INSTANTLY_KEY_SMARTMATCHAPP"},
+    "HeyReach":      {"platform": "instantly", "env_var": "INSTANTLY_KEY_HEYREACH"},
+    "Kayse":         {"platform": "instantly", "env_var": "INSTANTLY_KEY_KAYSE"},
+    "Prosperly":     {"platform": "instantly", "env_var": "INSTANTLY_KEY_PROSPERLY"},
 
     # EmailBison
-    "RankZero":          {"platform": "emailbison", "env_key": "EMAILBISON_RANKZERO"},
-    "SwishFunding (EB)": {"platform": "emailbison", "env_key": "EMAILBISON_SWISHFUNDING"},
+    "RankZero":          {"platform": "emailbison", "env_var": "EMAILBISON_KEY_RANKZERO"},
+    "SwishFunding (EB)": {"platform": "emailbison", "env_var": "EMAILBISON_KEY_SWISHFUNDING"},
 }
 
 # ---------------------------------------------------------------------------
 # API key reader
 # ---------------------------------------------------------------------------
 
-def read_api_key(env_key: str) -> str | None:
-    """Read API key from environment variable."""
-    return os.environ.get(env_key)
+def read_api_key(env_var: str) -> str | None:
+    """Read API key from an environment variable."""
+    value = os.environ.get(env_var)
+    return value.strip() if value else None
 
 # ---------------------------------------------------------------------------
 # HTTP helpers
@@ -549,11 +548,11 @@ def _should_refresh(client_name: str) -> bool:
 def _fetch_client(client_name: str) -> None:
     """Fetch data for one client and update cache."""
     cfg = CLIENTS[client_name]
-    key = read_api_key(cfg["env_key"])
+    key = read_api_key(cfg["env_var"])
 
     with _cache_lock:
         if not key:
-            _cache_errors[client_name] = "API key not found"
+            _cache_errors[client_name] = "No API key"
             _cache_ts[client_name] = time.time()
             return
 
@@ -730,8 +729,36 @@ tr.expand-row.visible{display:table-row}
 .d-alert{padding:9px 12px;border-radius:8px;font-size:12px;line-height:1.6;margin-bottom:6px}
 .d-alert.r{background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.18);color:#dc2626}
 .d-alert.a{background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.18);color:#d97706}
-@media(max-width:768px){.shell{padding:0 16px 24px}.exp-kpis{flex-direction:column}}
-@media(max-width:480px){.chips{display:none}}
+@media(max-width:768px){
+  .shell{padding:0 12px 24px}
+  .exp-kpis{flex-direction:column}
+  .exp-kpi{min-width:0}
+  .expand-inner{padding:16px 14px 18px}
+  .camp-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -14px;padding:0 14px}
+  .camp-table{min-width:600px}
+  .camp-name{max-width:140px;overflow:hidden;text-overflow:ellipsis}
+  table{min-width:0!important}
+  thead th,td{padding:0 8px;font-size:12px}
+  thead th{font-size:10px}
+  th[data-col="platform"],td.col-plat{display:none}
+  th[data-col="bounce_rate"],td.col-bounce{display:none}
+  th[data-col="status"],td.col-status{display:none}
+  .client-plat{display:block;font-size:10px}
+  tbody tr{height:44px}
+  .topbar{height:48px;gap:8px}
+  .logo{font-size:14px}
+  .topbar-mid{font-size:11px}
+  .btn{height:30px;padding:0 10px;font-size:11px}
+  .chips-wrap{padding:10px 0 8px}
+  .chip{height:26px;padding:0 8px;font-size:11px}
+  [data-tip]::after{display:none}
+}
+@media(max-width:480px){
+  .chips{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;-ms-overflow-style:none;padding-bottom:4px}
+  .chips::-webkit-scrollbar{display:none}
+  .chip{flex-shrink:0}
+  .exp-kpi-val{font-size:18px}
+}
 </style>
 </head>
 <body>
@@ -833,9 +860,9 @@ function renderTable(data){
     if(d.error){
       rows+='<tr class="err-row" data-name="'+name+'">';
       rows+='<td><div class="client-name" style="color:var(--tx3)">'+name+'</div><div class="client-plat">'+(d.platform||'')+'</div></td>';
-      rows+='<td><span style="font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--tx3)">'+(d.platform==='instantly'?'Instantly':'EmailBison')+'</span></td>';
-      rows+='<td class="num" colspan="5"><span style="color:var(--tx3);font-size:12px">'+d.error+'</span></td>';
-      rows+='<td>'+pill('error')+'</td><td></td></tr>';
+      rows+='<td class="col-plat"><span style="font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--tx3)">'+(d.platform==='instantly'?'Instantly':'EmailBison')+'</span></td>';
+      rows+='<td class="num" colspan="4"><span style="color:var(--tx3);font-size:12px">'+d.error+'</span></td>';
+      rows+='<td class="num col-bounce"></td><td class="col-status">'+pill('error')+'</td><td></td></tr>';
       return;
     }
     var sc=sentCls(d.sent_today||0,kpi.sent),rc=rrCls(d.reply_rate_today||0);
@@ -845,13 +872,13 @@ function renderTable(data){
     var expCls=isExp?' expanded':'';
     rows+='<tr data-name="'+name+'" class="'+selCls+expCls+'" onclick="toggleRow(this,\''+name+'\')">';
     rows+='<td><div class="client-name">'+name+'</div><div class="client-plat">'+(d.platform||'')+'</div></td>';
-    rows+='<td><span style="font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--tx3)">'+(d.platform==='instantly'?'Instantly':'EmailBison')+'</span></td>';
+    rows+='<td class="col-plat"><span style="font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--tx3)">'+(d.platform==='instantly'?'Instantly':'EmailBison')+'</span></td>';
     rows+='<td class="num"><span class="cell-val '+sc+'">'+fmt(d.sent_today)+'</span>'+trend(d.sent_trend)+'</td>';
     rows+='<td class="num"><span class="cell-val '+nc+'">'+fmt(d.not_contacted)+'</span></td>';
     rows+='<td class="num"><span class="cell-val '+rc+'">'+fmtPct(d.reply_rate_today)+'</span>'+trend(d.reply_trend)+'</td>';
     rows+='<td class="num"><span class="cell-val '+oc+'">'+fmt(d.opps_today)+'</span>'+trend(d.opp_trend)+'</td>';
-    rows+='<td class="num"><span class="cell-val '+bc+'">'+fmtPct(d.bounce_rate)+'</span></td>';
-    rows+='<td>'+pill(s)+'</td>';
+    rows+='<td class="num col-bounce"><span class="cell-val '+bc+'">'+fmtPct(d.bounce_rate)+'</span></td>';
+    rows+='<td class="col-status">'+pill(s)+'</td>';
     rows+='<td style="text-align:center"><span class="row-chevron">&#9658;</span></td>';
     rows+='</tr>';
     // Expand row (always rendered, toggled via CSS)
@@ -956,7 +983,7 @@ function buildExpandContent(name,d){
   // Row 2: Campaigns sub-table
   if(d.campaigns&&d.campaigns.length>0){
     h+='<div style="margin-bottom:20px"><div class="exp-section-label">Campaigns &mdash; '+(d.active_campaigns||0)+' active / '+(d.total_campaigns||0)+' total</div>';
-    h+=buildCampaignTable(d.campaigns);
+    h+='<div class="camp-table-wrap">'+buildCampaignTable(d.campaigns)+'</div>';
     h+='</div>';
   }
   // Alerts
@@ -1102,25 +1129,19 @@ class Handler(BaseHTTPRequestHandler):
 # ---------------------------------------------------------------------------
 
 def main():
-    parser = argparse.ArgumentParser(description="Multi-client campaign dashboard")
-    parser.add_argument("--port", type=int, default=PORT, help=f"Port (default: {PORT})")
-    parser.add_argument("--no-prefetch", action="store_true", help="Skip prefetch on startup")
-    args = parser.parse_args()
+    server = HTTPServer(("0.0.0.0", PORT), Handler)
+    print(f"Pre-fetching data for all clients...")
+    threads = []
+    for name in CLIENTS:
+        t = threading.Thread(target=_fetch_client, args=(name,), daemon=True)
+        t.start()
+        threads.append((name, t))
+    for name, t in threads:
+        t.join(timeout=REQUEST_TIMEOUT + 5)
+        status = "OK" if name in _cache_data else f"ERR: {_cache_errors.get(name, '?')}"
+        print(f"  {name}: {status}")
 
-    if not args.no_prefetch:
-        print("Pre-fetching data for all clients...")
-        threads = []
-        for name in CLIENTS:
-            t = threading.Thread(target=_fetch_client, args=(name,), daemon=True)
-            t.start()
-            threads.append((name, t))
-        for name, t in threads:
-            t.join(timeout=REQUEST_TIMEOUT + 5)
-            status = "OK" if name in _cache_data else f"ERR: {_cache_errors.get(name, '?')}"
-            print(f"  {name}: {status}")
-
-    server = HTTPServer(("0.0.0.0", args.port), Handler)
-    print(f"\nClient Dashboard running on port {args.port}")
+    print(f"\nClient Dashboard running at http://0.0.0.0:{PORT}")
     print(f"  {len(CLIENTS)} clients: {', '.join(CLIENTS.keys())}")
     print(f"  Cache TTL: {CACHE_TTL}s | Auto-refresh: {AUTO_REFRESH_MS//1000}s")
     print("  Ctrl+C to stop\n")
