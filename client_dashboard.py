@@ -758,22 +758,22 @@ tr.expand-row.visible{display:table-row}
 .exp-kpi-bar{height:3px;background:var(--bd);border-radius:2px;overflow:hidden;margin-top:10px}
 .exp-kpi-bar-fill{height:100%;border-radius:2px;transition:width .4s}
 .exp-kpi-bar-fill.g{background:var(--green)}.exp-kpi-bar-fill.a{background:var(--amber)}.exp-kpi-bar-fill.r{background:var(--red)}
-/* Campaign sub-table */
+/* Campaign sub-table — matches client-level table styling */
 .exp-section-label{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--tx3);font-weight:600;margin-bottom:12px;font-family:'Space Mono',monospace}
-.camp-table{width:100%;border-collapse:collapse;font-size:12px;background:#fff;border-radius:8px;overflow:hidden;border:1px solid var(--bd)}
-.camp-table th{padding:8px 12px;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3);font-weight:600;text-align:left;border-bottom:1px solid var(--bd);font-family:'Space Mono',monospace}
+.camp-table{width:100%;border-collapse:collapse;font-size:13px;background:var(--bg-el);border-radius:12px;overflow:hidden;border:1px solid var(--bd);box-shadow:var(--sh)}
+.camp-table th{padding:12px 16px;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--tx3);font-weight:600;text-align:left;border-bottom:1px solid var(--bd);font-family:'Space Mono',monospace;background:#fafafa}
 .camp-table th.num{text-align:right}
-.camp-table td{padding:10px 12px;color:var(--tx1);border-bottom:1px solid var(--bd);vertical-align:middle;height:38px}
-.camp-table td.num{text-align:right;font-family:'Space Mono',monospace}
+.camp-table td{padding:0 16px;color:var(--tx1);border-bottom:1px solid var(--bd);vertical-align:middle;height:52px;font-size:13px}
+.camp-table td.num{text-align:right;font-family:'Space Mono',monospace;font-size:13px}
 .camp-table tr:last-child td{border-bottom:none}
-.camp-table tr:hover td{background:rgba(0,0,0,.015)}
-.camp-name{font-weight:500;white-space:nowrap}
+.camp-table tr:hover td{background:var(--bg-hov)}
+.camp-name{font-weight:600;white-space:nowrap;font-size:13px;letter-spacing:-.01em;font-family:'Space Grotesk',sans-serif}
 .camp-status-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;flex-shrink:0;vertical-align:middle}
 .camp-status-active{background:#22c55e}.camp-status-paused{background:#94a3b8}
 /* Campaign group headers */
 .camp-group-hdr{cursor:pointer;user-select:none;transition:background .12s}
 .camp-group-hdr:hover{background:rgba(0,0,0,.03)}
-.camp-group-hdr td{padding:10px 12px!important;font-size:12px;font-weight:600;color:var(--tx2);border-bottom:1px solid var(--bd);font-family:'Space Grotesk',sans-serif}
+.camp-group-hdr td{padding:0 16px!important;height:48px;font-size:13px;font-weight:600;color:var(--tx2);border-bottom:1px solid var(--bd);font-family:'Space Grotesk',sans-serif}
 .camp-group-hdr .camp-chev{display:inline-block;font-size:9px;color:var(--tx3);margin-right:8px;transition:transform .2s}
 .camp-group-hdr.open .camp-chev{transform:rotate(90deg)}
 .camp-group-hdr .camp-group-count{font-weight:400;color:var(--tx3);font-size:11px;margin-left:4px}
