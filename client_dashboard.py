@@ -763,7 +763,7 @@ tr.expand-row.visible{display:table-row}
 .camp-table{width:100%;border-collapse:collapse;font-size:13px;background:var(--bg-el);border-radius:12px;overflow:hidden;border:1px solid var(--bd);box-shadow:var(--sh)}
 .camp-table th{padding:12px 16px;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--tx3);font-weight:600;text-align:left;border-bottom:1px solid var(--bd);font-family:'Space Mono',monospace;background:#fafafa}
 .camp-table th.num{text-align:right}
-.camp-table td{padding:0 16px;color:var(--tx1);border-bottom:1px solid var(--bd);vertical-align:middle;height:52px;font-size:13px}
+.camp-table td{padding:0 16px;color:var(--tx1);border-bottom:1px solid var(--bd);vertical-align:middle;height:52px;font-size:13px;white-space:nowrap}
 .camp-table td.num{text-align:right;font-family:'Space Mono',monospace;font-size:13px}
 .camp-table tr:last-child td{border-bottom:none}
 .camp-table tr:hover td{background:var(--bg-hov)}
