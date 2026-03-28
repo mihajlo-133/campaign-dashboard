@@ -11,6 +11,7 @@ Usage:
 
 import argparse
 import json
+import os
 import re
 import time
 import threading
@@ -63,25 +64,33 @@ POOL_DAYS_WARN    = 7     # below 7 days of leads → amber
 
 CLIENTS = {
     # Instantly v2
-    "MyPlace":       {"platform": "instantly", "key_path": "tools/accounts/myplace/instantly.md"},
-    "SwishFunding":  {"platform": "instantly", "key_path": "tools/accounts/swishfunding/instantly.md"},
-    "SmartMatchApp": {"platform": "instantly", "key_path": "tools/accounts/smartmatchapp/instantly.md"},
-    "HeyReach":      {"platform": "instantly", "key_path": "tools/accounts/heyreach-client/instantly.md"},
-    "Kayse":         {"platform": "instantly", "key_path": "tools/accounts/kayse/instantly.md"},
-    "Prosperly":     {"platform": "instantly", "key_path": "tools/accounts/prospeqt/prosperly_instantly.md"},  # key missing
+    "MyPlace":       {"platform": "instantly", "env_var": "INSTANTLY_KEY_MYPLACE",       "key_path": "tools/accounts/myplace/instantly.md"},
+    "SwishFunding":  {"platform": "instantly", "env_var": "INSTANTLY_KEY_SWISHFUNDING",  "key_path": "tools/accounts/swishfunding/instantly.md"},
+    "SmartMatchApp": {"platform": "instantly", "env_var": "INSTANTLY_KEY_SMARTMATCHAPP", "key_path": "tools/accounts/smartmatchapp/instantly.md"},
+    "HeyReach":      {"platform": "instantly", "env_var": "INSTANTLY_KEY_HEYREACH",      "key_path": "tools/accounts/heyreach-client/instantly.md"},
+    "Kayse":         {"platform": "instantly", "env_var": "INSTANTLY_KEY_KAYSE",          "key_path": "tools/accounts/kayse/instantly.md"},
+    "Prosperly":     {"platform": "instantly", "env_var": "INSTANTLY_KEY_PROSPERLY",     "key_path": "tools/accounts/prospeqt/prosperly_instantly.md"},
 
     # EmailBison
-    "RankZero":          {"platform": "emailbison", "key_path": "tools/accounts/rankzero/emailbison.md"},
-    "SwishFunding (EB)": {"platform": "emailbison", "key_path": "tools/accounts/swishfunding/emailbison.md"},
+    "RankZero":          {"platform": "emailbison", "env_var": "EMAILBISON_KEY_RANKZERO",      "key_path": "tools/accounts/rankzero/emailbison.md"},
+    "SwishFunding (EB)": {"platform": "emailbison", "env_var": "EMAILBISON_KEY_SWISHFUNDING",  "key_path": "tools/accounts/swishfunding/emailbison.md"},
 }
+
+# Detect if running on Render (PORT env var set)
+IS_RENDER = bool(os.environ.get("PORT"))
 
 # ---------------------------------------------------------------------------
 # API key reader
 # ---------------------------------------------------------------------------
 
-def read_api_key(rel_path: str) -> str | None:
-    """Read API key from a markdown file with a ```code block```."""
-    path = BASE_DIR / rel_path
+def read_api_key(key_ref: str) -> str | None:
+    """Read API key from env var (Render) or markdown file (local dev)."""
+    # Try env var first
+    value = os.environ.get(key_ref)
+    if value:
+        return value.strip()
+    # Fall back to file-based reading for local dev
+    path = BASE_DIR / key_ref
     if not path.exists():
         return None
     try:
@@ -557,7 +566,8 @@ def _should_refresh(client_name: str) -> bool:
 def _fetch_client(client_name: str) -> None:
     """Fetch data for one client and update cache."""
     cfg = CLIENTS[client_name]
-    key = read_api_key(cfg["key_path"])
+    key_ref = cfg["env_var"] if IS_RENDER else cfg["key_path"]
+    key = read_api_key(key_ref)
 
     with _cache_lock:
         if not key:
@@ -1116,7 +1126,8 @@ class Handler(BaseHTTPRequestHandler):
 
 def main():
     parser = argparse.ArgumentParser(description="Multi-client campaign dashboard")
-    parser.add_argument("--port", type=int, default=PORT, help=f"Port (default: {PORT})")
+    env_port = int(os.environ.get("PORT", PORT))
+    parser.add_argument("--port", type=int, default=env_port, help=f"Port (default: {PORT})")
     parser.add_argument("--no-prefetch", action="store_true", help="Skip prefetch on startup")
     args = parser.parse_args()
 
@@ -1132,7 +1143,8 @@ def main():
             status = "OK" if name in _cache_data else f"ERR: {_cache_errors.get(name, '?')}"
             print(f"  {name}: {status}")
 
-    server = HTTPServer(("127.0.0.1", args.port), Handler)
+    host = "0.0.0.0" if os.environ.get("PORT") else "127.0.0.1"
+    server = HTTPServer((host, args.port), Handler)
     print(f"\nClient Dashboard running at http://localhost:{args.port}")
     print(f"  {len(CLIENTS)} clients: {', '.join(CLIENTS.keys())}")
     print(f"  Cache TTL: {CACHE_TTL}s | Auto-refresh: {AUTO_REFRESH_MS//1000}s")
