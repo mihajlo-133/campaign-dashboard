@@ -1037,7 +1037,7 @@ function startCd(secs){
 function render(data){
   _allData=data;
   renderChips(data);renderTable(data);
-  document.getElementById('ts').textContent='Updated '+new Date().toLocaleTimeString();
+  document.getElementById('ts').textContent='Updated '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
 }
 function fetchAndRender(){
   fetch('/api/data').then(function(r){return r.json()}).then(function(data){
