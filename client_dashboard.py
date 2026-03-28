@@ -5,12 +5,12 @@ Real-time performance monitor for 6 Instantly and 2 EmailBison workspaces.
 Fetches live data, caches for 5 minutes, serves a single-page dashboard.
 
 Usage:
-  python client_dashboard.py             # port 8060
-  PORT=8061 python client_dashboard.py   # custom port via env var
+  python gtm/scripts/client_dashboard.py             # port 8060
+  python gtm/scripts/client_dashboard.py --port 8061
 """
 
+import argparse
 import json
-import os
 import re
 import time
 import threading
@@ -25,10 +25,12 @@ from pathlib import Path
 # Constants — edit these to change behavior
 # ---------------------------------------------------------------------------
 
-PORT = int(os.environ.get("PORT", 8060))
+PORT = 8060
 CACHE_TTL = 300          # seconds (5 minutes)
 REQUEST_TIMEOUT = 15     # seconds per API call
 AUTO_REFRESH_MS = 300000 # ms — must match CACHE_TTL
+
+BASE_DIR = Path(__file__).parent.parent.parent  # repo root
 
 # KPI targets per client (daily)
 # Keys must match CLIENTS dict keys exactly
@@ -61,26 +63,33 @@ POOL_DAYS_WARN    = 7     # below 7 days of leads → amber
 
 CLIENTS = {
     # Instantly v2
-    "MyPlace":       {"platform": "instantly", "env_var": "INSTANTLY_KEY_MYPLACE"},
-    "SwishFunding":  {"platform": "instantly", "env_var": "INSTANTLY_KEY_SWISHFUNDING"},
-    "SmartMatchApp": {"platform": "instantly", "env_var": "INSTANTLY_KEY_SMARTMATCHAPP"},
-    "HeyReach":      {"platform": "instantly", "env_var": "INSTANTLY_KEY_HEYREACH"},
-    "Kayse":         {"platform": "instantly", "env_var": "INSTANTLY_KEY_KAYSE"},
-    "Prosperly":     {"platform": "instantly", "env_var": "INSTANTLY_KEY_PROSPERLY"},
+    "MyPlace":       {"platform": "instantly", "key_path": "tools/accounts/myplace/instantly.md"},
+    "SwishFunding":  {"platform": "instantly", "key_path": "tools/accounts/swishfunding/instantly.md"},
+    "SmartMatchApp": {"platform": "instantly", "key_path": "tools/accounts/smartmatchapp/instantly.md"},
+    "HeyReach":      {"platform": "instantly", "key_path": "tools/accounts/heyreach-client/instantly.md"},
+    "Kayse":         {"platform": "instantly", "key_path": "tools/accounts/kayse/instantly.md"},
+    "Prosperly":     {"platform": "instantly", "key_path": "tools/accounts/prospeqt/prosperly_instantly.md"},  # key missing
 
     # EmailBison
-    "RankZero":          {"platform": "emailbison", "env_var": "EMAILBISON_KEY_RANKZERO"},
-    "SwishFunding (EB)": {"platform": "emailbison", "env_var": "EMAILBISON_KEY_SWISHFUNDING"},
+    "RankZero":          {"platform": "emailbison", "key_path": "tools/accounts/rankzero/emailbison.md"},
+    "SwishFunding (EB)": {"platform": "emailbison", "key_path": "tools/accounts/swishfunding/emailbison.md"},
 }
 
 # ---------------------------------------------------------------------------
 # API key reader
 # ---------------------------------------------------------------------------
 
-def read_api_key(env_var: str) -> str | None:
-    """Read API key from an environment variable."""
-    value = os.environ.get(env_var)
-    return value.strip() if value else None
+def read_api_key(rel_path: str) -> str | None:
+    """Read API key from a markdown file with a ```code block```."""
+    path = BASE_DIR / rel_path
+    if not path.exists():
+        return None
+    try:
+        content = path.read_text(encoding="utf-8")
+        match = re.search(r"```\n(.+?)\n```", content, re.DOTALL)
+        return match.group(1).strip() if match else None
+    except Exception:
+        return None
 
 # ---------------------------------------------------------------------------
 # HTTP helpers
@@ -548,11 +557,11 @@ def _should_refresh(client_name: str) -> bool:
 def _fetch_client(client_name: str) -> None:
     """Fetch data for one client and update cache."""
     cfg = CLIENTS[client_name]
-    key = read_api_key(cfg["env_var"])
+    key = read_api_key(cfg["key_path"])
 
     with _cache_lock:
         if not key:
-            _cache_errors[client_name] = "No API key"
+            _cache_errors[client_name] = "API key not found"
             _cache_ts[client_name] = time.time()
             return
 
@@ -615,29 +624,34 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Prospeqt &mdash; Campaign Dashboard</title>
+<link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAMAAACdt4HsAAAAHlBMVEVMaXEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABKvP01AAAACXRSTlMA46EiQoTCEGeetEsFAAAACXBIWXMAAAsTAAALEwEAmpwYAAABWElEQVR42u2Xyw7EIAhFS1Us///Dk3bqGywyq0l6t+oJeIngtk3lcXebXW4nIjisx2MAumRE+Pv4KUMeDqlRcIvRU6+lPA4gRqANwiMJUl3FZZ0kCGrrRMShts6Qh0NSSbCUsW4pjwNoQYOlHmlR3VVI5qGTIgtRkQJ46W6Qu8cwVE0UwrvATQLcxjrJpj5yOZYN2RaXN6KXMkxxxX3Pq1VQ342M0Xd4CXzWfA0oEbvA3HAq1Ay+cmoB5ZgTi93HpuZ7gPbRyb4OAN2jU66TATw/OnXNswDC+fmmUlgAvIAX8AL+AdD272VA36NWAUPzWwMw/XsFELnurQcIo5caII1eBQBTgDi8VENjFeIIkMYkz484SsDYBtNooAOw/fseDRSAfvrIQQQVAPx0VH8CAD99lDxwDkDDL1CRvBJg/UFOrdMD0P4FfrJOAQBz9F/ATx/48zmYLn8A5oQ0r5uSKKoAAAAASUVORK5CYII=">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#ffffff;--bg-el:#f8fafc;--bg-hov:#f1f5f9;--bg-sel:#eff6ff;
-  --bd:#e2e8f0;--bd-s:#cbd5e1;
-  --tx1:#0f172a;--tx2:#475569;--tx3:#94a3b8;
-  --blue:#3B82F6;--blue-h:#2563EB;--blue-bg:#DBEAFE;
-  --green:#22c55e;--amber:#f59e0b;--red:#ef4444;
-  --sh:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);
-  --sh-md:0 4px 6px -1px rgba(0,0,0,.07),0 2px 4px -1px rgba(0,0,0,.05);
-  --sh-lg:0 10px 15px -3px rgba(0,0,0,.08),0 4px 6px -2px rgba(0,0,0,.04);
+  --bg:#f4f4f4;--bg-el:#ffffff;--bg-hov:#f9f9f9;--bg-sel:#f0f4ff;
+  --bd:#e1e2e3;--bd-s:#d0d1d2;
+  --tx1:#000000;--tx2:#4d4d4d;--tx3:#909090;
+  --blue:#2756f7;--blue-h:#1679fa;--blue-bg:#e8eeff;
+  --green:#34C759;--amber:#f59e0b;--red:#C33939;
+  --sh:0 0.6px 0.6px -1.25px rgba(0,0,0,.09),0 2.3px 2.3px -2.5px rgba(0,0,0,.08),0 10px 10px -3.75px rgba(0,0,0,.03);
+  --sh-md:0 4px 12px rgba(0,0,0,.06);
+  --sh-lg:0 10px 25px -5px rgba(0,0,0,.08);
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{font-size:14px}
-body{background:var(--bg);color:var(--tx1);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;line-height:1.5;font-variant-numeric:tabular-nums;min-height:100vh}
+body{background:var(--bg);color:var(--tx1);font-family:'Inter',sans-serif;line-height:1.5;font-variant-numeric:tabular-nums;min-height:100vh}
 @media(prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 .shell{max-width:1280px;margin:0 auto;padding:0 24px 32px}
 /* Top bar */
-.topbar{display:flex;align-items:center;justify-content:space-between;height:56px;border-bottom:1px solid var(--bd);margin-bottom:0;gap:16px}
-.logo{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:700;color:var(--tx1);letter-spacing:-.02em}
-.logo-dot{width:8px;height:8px;border-radius:50%;background:var(--blue);flex-shrink:0}
-.topbar-mid{font-size:12px;color:var(--tx3)}
-.btn{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 14px;border-radius:6px;border:none;background:var(--blue);color:#fff;font-size:12px;font-weight:500;cursor:pointer;transition:background .15s;font-family:inherit}
-.btn:hover{background:var(--blue-h)}
+.topbar{display:flex;align-items:center;justify-content:space-between;height:64px;border-bottom:1px solid var(--bd);margin-bottom:0;gap:16px;padding:0 4px}
+.logo{display:flex;align-items:center;gap:10px;font-size:17px;font-weight:700;color:var(--tx1);letter-spacing:-.03em;font-family:'Space Grotesk',sans-serif}
+.logo-icon{width:28px;height:28px;border-radius:6px;background:linear-gradient(180deg,#FFEAA9 0%,#FFD348 35%,#FF9B1C 65%,#FF4A00 100%);display:flex;align-items:center;justify-content:center}
+.logo-icon svg{width:16px;height:16px}
+.topbar-mid{font-size:12px;color:var(--tx3);font-family:'Space Mono',monospace}
+.btn{display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 18px;border-radius:12px;border:none;background:linear-gradient(180deg,#1679fa -23%,#0a61d1 100%);color:#fff;font-size:13px;font-weight:600;cursor:pointer;transition:opacity .15s,transform .1s;font-family:'Inter',sans-serif;box-shadow:0 2px 8px rgba(22,121,250,.25)}
+.btn:hover{opacity:.92;transform:translateY(-1px)}
 .btn.loading .icon-ref{display:none}
 .btn .spin{display:none;width:12px;height:12px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite}
 .btn.loading .spin{display:block}
@@ -648,51 +662,51 @@ body{background:var(--bg);color:var(--tx1);font-family:-apple-system,BlinkMacSys
 .cd-fill.run{animation:countdown linear forwards}
 @keyframes countdown{from{width:100%}to{width:0%}}
 /* Summary chips */
-.chips-wrap{padding:16px 0 12px}
-.chips{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-.chip{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 12px;border-radius:15px;border:1px solid var(--bd);background:var(--bg-el);font-size:12px;color:var(--tx2)}
+.chips-wrap{padding:20px 0 16px}
+.chips{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.chip{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 14px;border-radius:8px;border:1px solid var(--bd);background:var(--bg-el);font-size:12px;color:var(--tx2);box-shadow:var(--sh);font-family:'Inter',sans-serif}
 .chip strong{color:var(--tx1);font-weight:600}
-.chip.c-red{border-color:rgba(239,68,68,.25);background:rgba(239,68,68,.04);color:#dc2626}
+.chip.c-red{border-color:rgba(195,57,57,.2);background:rgba(195,57,57,.04);color:#C33939}
 .chip.c-amber{border-color:rgba(245,158,11,.25);background:rgba(245,158,11,.04);color:#d97706}
-.chip.c-green{border-color:rgba(34,197,94,.25);background:rgba(34,197,94,.04);color:#16a34a}
-.chip.c-blue{border-color:var(--blue-bg);background:var(--blue-bg);color:var(--blue-h)}
+.chip.c-green{border-color:rgba(52,199,89,.2);background:rgba(52,199,89,.04);color:#29753c}
+.chip.c-blue{border-color:var(--blue-bg);background:var(--blue-bg);color:var(--blue)}
 .dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
 .dot-red{background:var(--red)}.dot-amber{background:var(--amber)}.dot-green{background:var(--green)}.dot-muted{background:var(--tx3)}
 /* Table */
-.tbl-wrap{border:1px solid var(--bd);border-radius:12px;overflow:hidden;box-shadow:var(--sh)}
+.tbl-wrap{border:1px solid var(--bd);border-radius:12px;overflow:hidden;box-shadow:var(--sh);background:var(--bg-el)}
 .tbl-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
 table{width:100%;border-collapse:collapse;min-width:760px;border-spacing:0}
-thead tr{background:var(--bg-el)}
-thead th{padding:10px 16px;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.06em;color:var(--tx3);text-align:left;white-space:nowrap;cursor:pointer;user-select:none;transition:color .15s;border-bottom:1px solid var(--bd)}
+thead tr{background:#fafafa}
+thead th{padding:12px 16px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--tx3);text-align:left;white-space:nowrap;cursor:pointer;user-select:none;transition:color .15s;border-bottom:1px solid var(--bd);font-family:'Space Mono',monospace}
 thead th.num{text-align:right}
-thead th:hover{color:var(--tx2)}
+thead th:hover{color:var(--tx1)}
 thead th.sort-asc::after{content:' \2191';color:var(--blue)}
 thead th.sort-desc::after{content:' \2193';color:var(--blue)}
-tbody tr{height:50px;cursor:pointer;transition:background .12s}
+tbody tr{height:52px;cursor:pointer;transition:background .12s}
 tbody tr:hover{background:var(--bg-hov)}
 tbody tr.selected{background:var(--bg-sel);box-shadow:inset 3px 0 0 var(--blue)}
 tbody tr.err-row{cursor:default}
 tbody tr.err-row:hover{background:transparent}
 td{padding:0 16px;font-size:13px;color:var(--tx1);white-space:nowrap;border-bottom:1px solid var(--bd)}
 tbody tr:last-child td{border-bottom:none}
-td.num{text-align:right;font-family:ui-monospace,'SF Mono','Cascadia Code',monospace;font-size:13px}
-.client-name{font-weight:600;font-size:13px;letter-spacing:-.01em}
-.client-plat{font-size:11px;color:var(--tx3);letter-spacing:.02em;text-transform:uppercase;margin-top:1px}
-.cell-val{font-family:ui-monospace,'SF Mono',monospace}
-.cell-val.g{color:#16a34a}.cell-val.a{color:#d97706}.cell-val.r{color:#dc2626}.cell-val.m{color:var(--tx3)}
+td.num{text-align:right;font-family:'Space Mono',monospace;font-size:13px}
+.client-name{font-weight:600;font-size:13px;letter-spacing:-.01em;font-family:'Space Grotesk',sans-serif}
+.client-plat{font-size:11px;color:var(--tx3);letter-spacing:.02em;text-transform:uppercase;margin-top:1px;font-family:'Space Mono',monospace}
+.cell-val{font-family:'Space Mono',monospace}
+.cell-val.g{color:#29753c}.cell-val.a{color:#d97706}.cell-val.r{color:#C33939}.cell-val.m{color:var(--tx3)}
 .trend{font-size:10px;margin-left:3px}
-.trend-u{color:#16a34a}.trend-d{color:#dc2626}.trend-f{color:var(--tx3)}
-.pill{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:11px;font-size:11px;font-weight:500;letter-spacing:.02em}
-.pill-g{background:rgba(34,197,94,.1);color:#16a34a}
-.pill-a{background:rgba(245,158,11,.1);color:#d97706}
-.pill-r{background:rgba(239,68,68,.1);color:#dc2626}
+.trend-u{color:#29753c}.trend-d{color:#C33939}.trend-f{color:var(--tx3)}
+.pill{display:inline-flex;align-items:center;height:24px;padding:0 10px;border-radius:6px;font-size:11px;font-weight:600;letter-spacing:.02em}
+.pill-g{background:rgba(52,199,89,.08);color:#29753c;border:1px solid rgba(52,199,89,.2)}
+.pill-a{background:rgba(245,158,11,.08);color:#d97706;border:1px solid rgba(245,158,11,.2)}
+.pill-r{background:rgba(195,57,57,.08);color:#C33939;border:1px solid rgba(195,57,57,.2)}
 .pill-m{background:var(--bg-el);color:var(--tx3);border:1px solid var(--bd)}
 /* Skeleton */
 .skel{background:linear-gradient(90deg,#f1f5f9 25%,#e2e8f0 50%,#f1f5f9 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:4px;display:inline-block}
 @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
 /* Tooltip */
 [data-tip]{position:relative}
-[data-tip]::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:#fff;color:var(--tx2);font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid var(--bd);box-shadow:var(--sh-md);white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .12s;z-index:100;letter-spacing:normal;text-transform:none}
+[data-tip]::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:#000;color:#fff;font-size:11px;padding:6px 12px;border-radius:8px;border:none;box-shadow:var(--sh-md);white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .12s;z-index:100;letter-spacing:normal;text-transform:none;font-family:'Inter',sans-serif}
 [data-tip]:hover::after{opacity:1}
 /* Expandable row */
 .row-chevron{display:inline-block;font-size:11px;color:var(--tx3);transition:transform .2s ease;margin-left:4px}
@@ -700,71 +714,43 @@ tbody tr.expanded .row-chevron{transform:rotate(90deg)}
 tr.expand-row{display:none}
 tr.expand-row.visible{display:table-row}
 .expand-row td{padding:0!important;border:none!important;height:0;line-height:0}
-.expand-panel{max-height:0;overflow:hidden;transition:max-height .22s ease;background:#f8fafc;border-left:3px solid var(--blue)}
+.expand-panel{max-height:0;overflow:hidden;transition:max-height .22s ease;background:#fafafa;border-left:3px solid var(--blue)}
 .expand-panel.open{max-height:2000px}
-.expand-inner{padding:20px 24px 24px}
+.expand-inner{padding:24px 28px 28px}
 /* KPI cards row */
-.exp-kpis{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px}
-.exp-kpi{background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:14px 18px;flex:1;min-width:140px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
-.exp-kpi-label{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--tx3);font-weight:500;margin-bottom:4px}
-.exp-kpi-val{font-size:22px;font-weight:700;font-family:ui-monospace,'SF Mono',monospace;letter-spacing:-.03em;line-height:1.1;color:var(--tx1)}
-.exp-kpi-val.g{color:#16a34a}.exp-kpi-val.a{color:#d97706}.exp-kpi-val.r{color:#dc2626}
-.exp-kpi-sub{font-size:11px;color:var(--tx3);margin-top:4px}
-.exp-kpi-bar{height:3px;background:var(--bd);border-radius:2px;overflow:hidden;margin-top:8px}
+.exp-kpis{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:24px}
+.exp-kpi{background:#fff;border:1px solid var(--bd);border-radius:12px;padding:16px 20px;flex:1;min-width:140px;box-shadow:var(--sh)}
+.exp-kpi-label{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--tx3);font-weight:600;margin-bottom:6px;font-family:'Space Mono',monospace}
+.exp-kpi-val{font-size:24px;font-weight:700;font-family:'Space Grotesk',sans-serif;letter-spacing:-.03em;line-height:1.1;color:var(--tx1)}
+.exp-kpi-val.g{color:#29753c}.exp-kpi-val.a{color:#d97706}.exp-kpi-val.r{color:#C33939}
+.exp-kpi-sub{font-size:11px;color:var(--tx3);margin-top:6px}
+.exp-kpi-bar{height:3px;background:var(--bd);border-radius:2px;overflow:hidden;margin-top:10px}
 .exp-kpi-bar-fill{height:100%;border-radius:2px;transition:width .4s}
 .exp-kpi-bar-fill.g{background:var(--green)}.exp-kpi-bar-fill.a{background:var(--amber)}.exp-kpi-bar-fill.r{background:var(--red)}
 /* Campaign sub-table */
-.exp-section-label{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--tx3);font-weight:500;margin-bottom:10px}
-.camp-table{width:100%;border-collapse:collapse;font-size:12px}
-.camp-table th{padding:7px 10px;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3);font-weight:500;text-align:left;border-bottom:1px solid var(--bd)}
+.exp-section-label{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--tx3);font-weight:600;margin-bottom:12px;font-family:'Space Mono',monospace}
+.camp-table{width:100%;border-collapse:collapse;font-size:12px;background:#fff;border-radius:8px;overflow:hidden;border:1px solid var(--bd)}
+.camp-table th{padding:8px 12px;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3);font-weight:600;text-align:left;border-bottom:1px solid var(--bd);font-family:'Space Mono',monospace}
 .camp-table th.num{text-align:right}
-.camp-table td{padding:9px 10px;color:var(--tx1);border-bottom:1px solid var(--bd);vertical-align:middle;height:36px}
-.camp-table td.num{text-align:right;font-family:ui-monospace,'SF Mono',monospace}
+.camp-table td{padding:10px 12px;color:var(--tx1);border-bottom:1px solid var(--bd);vertical-align:middle;height:38px}
+.camp-table td.num{text-align:right;font-family:'Space Mono',monospace}
 .camp-table tr:last-child td{border-bottom:none}
-.camp-table tr:hover td{background:rgba(0,0,0,.02)}
+.camp-table tr:hover td{background:rgba(0,0,0,.015)}
 .camp-name{font-weight:500;white-space:nowrap}
 .camp-status-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;flex-shrink:0;vertical-align:middle}
 .camp-status-active{background:#22c55e}.camp-status-paused{background:#94a3b8}
 /* Alerts in expanded */
-.d-alert{padding:9px 12px;border-radius:8px;font-size:12px;line-height:1.6;margin-bottom:6px}
-.d-alert.r{background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.18);color:#dc2626}
-.d-alert.a{background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.18);color:#d97706}
-@media(max-width:768px){
-  .shell{padding:0 12px 24px}
-  .exp-kpis{flex-direction:column}
-  .exp-kpi{min-width:0}
-  .expand-inner{padding:16px 14px 18px}
-  .camp-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -14px;padding:0 14px}
-  .camp-table{min-width:600px}
-  .camp-name{max-width:140px;overflow:hidden;text-overflow:ellipsis}
-  table{min-width:0!important}
-  thead th,td{padding:0 8px;font-size:12px}
-  thead th{font-size:10px}
-  th[data-col="platform"],td.col-plat{display:none}
-  th[data-col="bounce_rate"],td.col-bounce{display:none}
-  th[data-col="status"],td.col-status{display:none}
-  .client-plat{display:block;font-size:10px}
-  tbody tr{height:44px}
-  .topbar{height:48px;gap:8px}
-  .logo{font-size:14px}
-  .topbar-mid{font-size:11px}
-  .btn{height:30px;padding:0 10px;font-size:11px}
-  .chips-wrap{padding:10px 0 8px}
-  .chip{height:26px;padding:0 8px;font-size:11px}
-  [data-tip]::after{display:none}
-}
-@media(max-width:480px){
-  .chips{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;-ms-overflow-style:none;padding-bottom:4px}
-  .chips::-webkit-scrollbar{display:none}
-  .chip{flex-shrink:0}
-  .exp-kpi-val{font-size:18px}
-}
+.d-alert{padding:10px 14px;border-radius:8px;font-size:12px;line-height:1.6;margin-bottom:8px}
+.d-alert.r{background:rgba(195,57,57,.05);border:1px solid rgba(195,57,57,.15);color:#C33939}
+.d-alert.a{background:rgba(245,158,11,.05);border:1px solid rgba(245,158,11,.15);color:#d97706}
+@media(max-width:768px){.shell{padding:0 16px 24px}.exp-kpis{flex-direction:column}}
+@media(max-width:480px){.chips{display:none}}
 </style>
 </head>
 <body>
 <div class="shell">
 <div class="topbar">
-  <div class="logo"><span class="logo-dot"></span>Prospeqt</div>
+  <div class="logo"><span class="logo-icon"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C8 7 4 10 4 14a8 8 0 0016 0c0-4-4-7-8-12z" fill="#fff"/></svg></span>Prospeqt</div>
   <span class="topbar-mid" id="ts">--</span>
   <button class="btn" onclick="forceRefresh()" id="refresh-btn">
     <span class="icon-ref">&#x21BB; Refresh</span>
@@ -860,9 +846,9 @@ function renderTable(data){
     if(d.error){
       rows+='<tr class="err-row" data-name="'+name+'">';
       rows+='<td><div class="client-name" style="color:var(--tx3)">'+name+'</div><div class="client-plat">'+(d.platform||'')+'</div></td>';
-      rows+='<td class="col-plat"><span style="font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--tx3)">'+(d.platform==='instantly'?'Instantly':'EmailBison')+'</span></td>';
-      rows+='<td class="num" colspan="4"><span style="color:var(--tx3);font-size:12px">'+d.error+'</span></td>';
-      rows+='<td class="num col-bounce"></td><td class="col-status">'+pill('error')+'</td><td></td></tr>';
+      rows+='<td><span style="font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--tx3)">'+(d.platform==='instantly'?'Instantly':'EmailBison')+'</span></td>';
+      rows+='<td class="num" colspan="5"><span style="color:var(--tx3);font-size:12px">'+d.error+'</span></td>';
+      rows+='<td>'+pill('error')+'</td><td></td></tr>';
       return;
     }
     var sc=sentCls(d.sent_today||0,kpi.sent),rc=rrCls(d.reply_rate_today||0);
@@ -872,13 +858,13 @@ function renderTable(data){
     var expCls=isExp?' expanded':'';
     rows+='<tr data-name="'+name+'" class="'+selCls+expCls+'" onclick="toggleRow(this,\''+name+'\')">';
     rows+='<td><div class="client-name">'+name+'</div><div class="client-plat">'+(d.platform||'')+'</div></td>';
-    rows+='<td class="col-plat"><span style="font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--tx3)">'+(d.platform==='instantly'?'Instantly':'EmailBison')+'</span></td>';
+    rows+='<td><span style="font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--tx3)">'+(d.platform==='instantly'?'Instantly':'EmailBison')+'</span></td>';
     rows+='<td class="num"><span class="cell-val '+sc+'">'+fmt(d.sent_today)+'</span>'+trend(d.sent_trend)+'</td>';
     rows+='<td class="num"><span class="cell-val '+nc+'">'+fmt(d.not_contacted)+'</span></td>';
     rows+='<td class="num"><span class="cell-val '+rc+'">'+fmtPct(d.reply_rate_today)+'</span>'+trend(d.reply_trend)+'</td>';
     rows+='<td class="num"><span class="cell-val '+oc+'">'+fmt(d.opps_today)+'</span>'+trend(d.opp_trend)+'</td>';
-    rows+='<td class="num col-bounce"><span class="cell-val '+bc+'">'+fmtPct(d.bounce_rate)+'</span></td>';
-    rows+='<td class="col-status">'+pill(s)+'</td>';
+    rows+='<td class="num"><span class="cell-val '+bc+'">'+fmtPct(d.bounce_rate)+'</span></td>';
+    rows+='<td>'+pill(s)+'</td>';
     rows+='<td style="text-align:center"><span class="row-chevron">&#9658;</span></td>';
     rows+='</tr>';
     // Expand row (always rendered, toggled via CSS)
@@ -983,7 +969,7 @@ function buildExpandContent(name,d){
   // Row 2: Campaigns sub-table
   if(d.campaigns&&d.campaigns.length>0){
     h+='<div style="margin-bottom:20px"><div class="exp-section-label">Campaigns &mdash; '+(d.active_campaigns||0)+' active / '+(d.total_campaigns||0)+' total</div>';
-    h+='<div class="camp-table-wrap">'+buildCampaignTable(d.campaigns)+'</div>';
+    h+=buildCampaignTable(d.campaigns);
     h+='</div>';
   }
   // Alerts
@@ -1129,19 +1115,25 @@ class Handler(BaseHTTPRequestHandler):
 # ---------------------------------------------------------------------------
 
 def main():
-    server = HTTPServer(("0.0.0.0", PORT), Handler)
-    print(f"Pre-fetching data for all clients...")
-    threads = []
-    for name in CLIENTS:
-        t = threading.Thread(target=_fetch_client, args=(name,), daemon=True)
-        t.start()
-        threads.append((name, t))
-    for name, t in threads:
-        t.join(timeout=REQUEST_TIMEOUT + 5)
-        status = "OK" if name in _cache_data else f"ERR: {_cache_errors.get(name, '?')}"
-        print(f"  {name}: {status}")
+    parser = argparse.ArgumentParser(description="Multi-client campaign dashboard")
+    parser.add_argument("--port", type=int, default=PORT, help=f"Port (default: {PORT})")
+    parser.add_argument("--no-prefetch", action="store_true", help="Skip prefetch on startup")
+    args = parser.parse_args()
 
-    print(f"\nClient Dashboard running at http://0.0.0.0:{PORT}")
+    if not args.no_prefetch:
+        print("Pre-fetching data for all clients...")
+        threads = []
+        for name in CLIENTS:
+            t = threading.Thread(target=_fetch_client, args=(name,), daemon=True)
+            t.start()
+            threads.append((name, t))
+        for name, t in threads:
+            t.join(timeout=REQUEST_TIMEOUT + 5)
+            status = "OK" if name in _cache_data else f"ERR: {_cache_errors.get(name, '?')}"
+            print(f"  {name}: {status}")
+
+    server = HTTPServer(("127.0.0.1", args.port), Handler)
+    print(f"\nClient Dashboard running at http://localhost:{args.port}")
     print(f"  {len(CLIENTS)} clients: {', '.join(CLIENTS.keys())}")
     print(f"  Cache TTL: {CACHE_TTL}s | Auto-refresh: {AUTO_REFRESH_MS//1000}s")
     print("  Ctrl+C to stop\n")
