@@ -598,16 +598,37 @@ def _fetch_client(client_name: str) -> None:
             _cache_ts[client_name]     = time.time()
 
 
+_bg_refresh_running = False
+
+
+def _background_refresh_loop():
+    """Continuously refresh all clients on a timer. Runs in a daemon thread."""
+    while True:
+        threads = []
+        for name in CLIENTS:
+            if _should_refresh(name):
+                t = threading.Thread(target=_fetch_client, args=(name,), daemon=True)
+                t.start()
+                threads.append(t)
+        for t in threads:
+            t.join(timeout=REQUEST_TIMEOUT + 5)
+        time.sleep(60)  # check every 60s, but CACHE_TTL controls actual refresh
+
+
+def start_background_refresh():
+    """Start the background refresh loop (idempotent)."""
+    global _bg_refresh_running
+    if _bg_refresh_running:
+        return
+    _bg_refresh_running = True
+    t = threading.Thread(target=_background_refresh_loop, daemon=True)
+    t.start()
+
+
 def get_all_data() -> dict:
-    """Return cached data for all clients, refreshing stale entries."""
-    threads = []
-    for name in CLIENTS:
-        if _should_refresh(name):
-            t = threading.Thread(target=_fetch_client, args=(name,), daemon=True)
-            t.start()
-            threads.append(t)
-    for t in threads:
-        t.join(timeout=REQUEST_TIMEOUT + 5)
+    """Return cached data instantly — never blocks on API fetches."""
+    # Ensure background refresh is running
+    start_background_refresh()
 
     result = {}
     with _cache_lock:
@@ -618,7 +639,7 @@ def get_all_data() -> dict:
             elif name in _cache_errors:
                 entry = {"error": _cache_errors[name], "status": "error"}
             else:
-                entry = {"error": "No data yet", "status": "error"}
+                entry = {"error": "Loading...", "status": "loading"}
             entry["platform"] = CLIENTS[name]["platform"]
             result[name] = entry
     return result
@@ -819,7 +840,7 @@ var KPI = {
 function fmt(n){return n==null?'--':Number(n).toLocaleString('en-US')}
 function fmtPct(n,d){return n==null?'--':Number(n).toFixed(d!=null?d:2)+'%'}
 function fmtDec(n,d){return n==null?'--':Number(n).toFixed(d!=null?d:1)}
-function clientStatus(d){return d.error?'error':(d.status||'error')}
+function clientStatus(d){return d.status==='loading'?'loading':d.error?'error':(d.status||'error')}
 function statusOrder(s){return s==='red'?0:s==='amber'?1:s==='green'?2:3}
 function sentCls(v,k){if(!k)return 'm';var r=v/k;return r>=0.9?'g':r>=0.7?'a':'r'}
 function rrCls(r){return r>=1.0?'g':r>=0.5?'a':'r'}
@@ -835,6 +856,7 @@ function pill(s){
   if(s==='green')return '<span class="pill pill-g">On Track</span>';
   if(s==='amber')return '<span class="pill pill-a">Watch</span>';
   if(s==='red')  return '<span class="pill pill-r">Action</span>';
+  if(s==='loading')return '<span class="pill pill-m"><span class="skel" style="width:40px;height:10px"></span></span>';
   return '<span class="pill pill-m">Error</span>';
 }
 function sortedKeys(data){
@@ -1049,10 +1071,16 @@ function render(data){
   renderChips(data);renderTable(data);
   document.getElementById('ts').textContent='Updated '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
 }
+function hasLoading(data){
+  return Object.keys(data).some(function(k){return data[k].status==='loading'||data[k].error==='Loading...'});
+}
 function fetchAndRender(){
   fetch('/api/data').then(function(r){return r.json()}).then(function(data){
-    render(data);startCd(Math.floor(REFRESH_MS/1000));
-    if(_rt)clearTimeout(_rt);_rt=setTimeout(fetchAndRender,REFRESH_MS);
+    render(data);
+    // Poll every 3s while data is still loading, then normal interval
+    var interval=hasLoading(data)?3000:REFRESH_MS;
+    startCd(Math.floor(interval/1000));
+    if(_rt)clearTimeout(_rt);_rt=setTimeout(fetchAndRender,interval);
   }).catch(function(e){
     document.getElementById('ts').textContent='Error: '+e.message;
     if(_rt)clearTimeout(_rt);_rt=setTimeout(fetchAndRender,30000);
@@ -1062,9 +1090,16 @@ function forceRefresh(){
   if(_rt)clearTimeout(_rt);
   var btn=document.getElementById('refresh-btn');btn.classList.add('loading');
   fetch('/api/refresh',{method:'POST'}).catch(function(){}).finally(function(){
-    fetch('/api/data').then(function(r){return r.json()}).then(function(data){
-      render(data);startCd(Math.floor(REFRESH_MS/1000));_rt=setTimeout(fetchAndRender,REFRESH_MS);
-    }).catch(function(){}).finally(function(){btn.classList.remove('loading')});
+    // Poll quickly until fresh data arrives
+    var polls=0;
+    function pollFresh(){
+      fetch('/api/data').then(function(r){return r.json()}).then(function(data){
+        render(data);polls++;
+        if(hasLoading(data)&&polls<20){setTimeout(pollFresh,2000)}
+        else{startCd(Math.floor(REFRESH_MS/1000));_rt=setTimeout(fetchAndRender,REFRESH_MS);btn.classList.remove('loading')}
+      }).catch(function(){btn.classList.remove('loading')});
+    }
+    pollFresh();
   });
 }
 fetchAndRender();
