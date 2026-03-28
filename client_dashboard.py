@@ -64,16 +64,16 @@ POOL_DAYS_WARN    = 7     # below 7 days of leads → amber
 
 CLIENTS = {
     # Instantly v2
-    "MyPlace":       {"platform": "instantly", "env_var": "INSTANTLY_KEY_MYPLACE",       "key_path": "tools/accounts/myplace/instantly.md"},
-    "SwishFunding":  {"platform": "instantly", "env_var": "INSTANTLY_KEY_SWISHFUNDING",  "key_path": "tools/accounts/swishfunding/instantly.md"},
-    "SmartMatchApp": {"platform": "instantly", "env_var": "INSTANTLY_KEY_SMARTMATCHAPP", "key_path": "tools/accounts/smartmatchapp/instantly.md"},
-    "HeyReach":      {"platform": "instantly", "env_var": "INSTANTLY_KEY_HEYREACH",      "key_path": "tools/accounts/heyreach-client/instantly.md"},
-    "Kayse":         {"platform": "instantly", "env_var": "INSTANTLY_KEY_KAYSE",          "key_path": "tools/accounts/kayse/instantly.md"},
-    "Prosperly":     {"platform": "instantly", "env_var": "INSTANTLY_KEY_PROSPERLY",     "key_path": "tools/accounts/prospeqt/prosperly_instantly.md"},
+    "MyPlace":       {"platform": "instantly", "env_var": "INSTANTLY_MYPLACE",       "key_path": "tools/accounts/myplace/instantly.md"},
+    "SwishFunding":  {"platform": "instantly", "env_var": "INSTANTLY_SWISHFUNDING",  "key_path": "tools/accounts/swishfunding/instantly.md"},
+    "SmartMatchApp": {"platform": "instantly", "env_var": "INSTANTLY_SMARTMATCHAPP", "key_path": "tools/accounts/smartmatchapp/instantly.md"},
+    "HeyReach":      {"platform": "instantly", "env_var": "INSTANTLY_HEYREACH",      "key_path": "tools/accounts/heyreach-client/instantly.md"},
+    "Kayse":         {"platform": "instantly", "env_var": "INSTANTLY_KAYSE",          "key_path": "tools/accounts/kayse/instantly.md"},
+    "Prosperly":     {"platform": "instantly", "env_var": "INSTANTLY_PROSPERLY",     "key_path": "tools/accounts/prospeqt/prosperly_instantly.md"},
 
     # EmailBison
-    "RankZero":          {"platform": "emailbison", "env_var": "EMAILBISON_KEY_RANKZERO",      "key_path": "tools/accounts/rankzero/emailbison.md"},
-    "SwishFunding (EB)": {"platform": "emailbison", "env_var": "EMAILBISON_KEY_SWISHFUNDING",  "key_path": "tools/accounts/swishfunding/emailbison.md"},
+    "RankZero":          {"platform": "emailbison", "env_var": "EMAILBISON_RANKZERO",      "key_path": "tools/accounts/rankzero/emailbison.md"},
+    "SwishFunding (EB)": {"platform": "emailbison", "env_var": "EMAILBISON_SWISHFUNDING",  "key_path": "tools/accounts/swishfunding/emailbison.md"},
 }
 
 # Detect if running on Render (PORT env var set)
