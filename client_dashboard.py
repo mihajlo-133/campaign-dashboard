@@ -770,6 +770,15 @@ tr.expand-row.visible{display:table-row}
 .camp-name{font-weight:500;white-space:nowrap}
 .camp-status-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;flex-shrink:0;vertical-align:middle}
 .camp-status-active{background:#22c55e}.camp-status-paused{background:#94a3b8}
+/* Campaign group headers */
+.camp-group-hdr{cursor:pointer;user-select:none;transition:background .12s}
+.camp-group-hdr:hover{background:rgba(0,0,0,.03)}
+.camp-group-hdr td{padding:10px 12px!important;font-size:12px;font-weight:600;color:var(--tx2);border-bottom:1px solid var(--bd);font-family:'Space Grotesk',sans-serif}
+.camp-group-hdr .camp-chev{display:inline-block;font-size:9px;color:var(--tx3);margin-right:8px;transition:transform .2s}
+.camp-group-hdr.open .camp-chev{transform:rotate(90deg)}
+.camp-group-hdr .camp-group-count{font-weight:400;color:var(--tx3);font-size:11px;margin-left:4px}
+.camp-group-row{display:none}
+.camp-group-row.visible{display:table-row}
 /* Alerts in expanded */
 .d-alert{padding:10px 14px;border-radius:8px;font-size:12px;line-height:1.6;margin-bottom:8px}
 .d-alert.r{background:rgba(195,57,57,.05);border:1px solid rgba(195,57,57,.15);color:#C33939}
@@ -925,35 +934,57 @@ function renderChips(data){
   if(counts.error) h+='<span class="chip"><span class="dot dot-muted"></span><strong>'+counts.error+'</strong>&nbsp;errors</span>';
   document.getElementById('chips').innerHTML=h;
 }
+var _campGroupId=0;
+function buildCampaignRow(c){
+  var isActive=c.status==='active';
+  var dotCls=isActive?'camp-status-active':'camp-status-paused';
+  var rr=c.sent>0?fmtPct(c.replies/c.sent*100):'--';
+  var nc=c.not_contacted!=null?fmt(c.not_contacted):'--';
+  var h='<tr>';
+  h+='<td><span class="camp-name" title="'+c.name+'">'+c.name+'</span></td>';
+  h+='<td style="white-space:nowrap"><span class="camp-status-dot '+dotCls+'"></span>'+(isActive?'Active':'Paused')+'</td>';
+  h+='<td class="num">'+fmt(c.sent)+'</td>';
+  h+='<td class="num" style="color:'+(c.not_contacted>0?'#d97706':'var(--tx3)')+'">'+nc+'</td>';
+  h+='<td class="num" style="color:'+(c.replies>0?'#29753c':'var(--tx3)')+'">'+fmt(c.replies)+'</td>';
+  h+='<td class="num" style="color:'+(c.bounced>0?'#C33939':'var(--tx3)')+'">'+fmt(c.bounced)+'</td>';
+  h+='<td class="num" style="color:'+(c.opps>0?'#29753c':'var(--tx3)')+'">'+fmt(c.opps)+'</td>';
+  h+='<td class="num">'+rr+'</td>';
+  h+='</tr>';
+  return h;
+}
 function buildCampaignTable(campaigns){
   if(!campaigns||campaigns.length===0)return '<p style="font-size:12px;color:var(--tx3);padding:8px 0">No campaign data available.</p>';
-  // Sort: active first (by sent desc), then paused (by sent desc)
-  var sorted=campaigns.slice().sort(function(a,b){
-    if(a.status==='active'&&b.status!=='active')return -1;
-    if(a.status!=='active'&&b.status==='active')return 1;
-    return (b.sent||0)-(a.sent||0);
-  });
+  var bySent=function(a,b){return (b.sent||0)-(a.sent||0)};
+  var active=campaigns.filter(function(c){return c.status==='active'}).sort(bySent);
+  var paused=campaigns.filter(function(c){return c.status==='paused'||c.status==='stopped'}).sort(bySent);
+  var other=campaigns.filter(function(c){return c.status!=='active'&&c.status!=='paused'&&c.status!=='stopped'}).sort(bySent);
   var h='<table class="camp-table">';
   h+='<thead><tr><th>Campaign</th><th>Status</th><th class="num">Sent</th><th class="num">Remaining</th><th class="num">Replies</th><th class="num">Bounced</th><th class="num">Opps</th><th class="num">Reply Rate</th></tr></thead>';
   h+='<tbody>';
-  sorted.forEach(function(c){
-    var isActive=c.status==='active';
-    var dotCls=isActive?'camp-status-active':'camp-status-paused';
-    var rr=c.sent>0?fmtPct(c.replies/c.sent*100):'--';
-    var nc=c.not_contacted!=null?fmt(c.not_contacted):'--';
-    h+='<tr>';
-    h+='<td><span class="camp-name" title="'+c.name+'">'+c.name+'</span></td>';
-    h+='<td style="white-space:nowrap"><span class="camp-status-dot '+dotCls+'"></span>'+(isActive?'Active':'Paused')+'</td>';
-    h+='<td class="num">'+fmt(c.sent)+'</td>';
-    h+='<td class="num" style="color:'+(c.not_contacted>0?'#d97706':'var(--tx3)')+'">'+nc+'</td>';
-    h+='<td class="num" style="color:'+(c.replies>0?'#16a34a':'var(--tx3)')+'">'+fmt(c.replies)+'</td>';
-    h+='<td class="num" style="color:'+(c.bounced>0?'#dc2626':'var(--tx3)')+'">'+fmt(c.bounced)+'</td>';
-    h+='<td class="num" style="color:'+(c.opps>0?'#16a34a':'var(--tx3)')+'">'+fmt(c.opps)+'</td>';
-    h+='<td class="num">'+rr+'</td>';
-    h+='</tr>';
-  });
+  // Active campaigns: always visible
+  if(active.length===0){h+='<tr><td colspan="8" style="font-size:12px;color:var(--tx3);padding:12px">No active campaigns</td></tr>';}
+  active.forEach(function(c){h+=buildCampaignRow(c)});
+  // Paused: collapsed group
+  if(paused.length){
+    var gid='cg'+(_campGroupId++);
+    h+='<tr class="camp-group-hdr" onclick="toggleCampGroup(this,\''+gid+'\')">';
+    h+='<td colspan="8"><span class="camp-chev">&#9658;</span>Paused<span class="camp-group-count">('+paused.length+')</span></td></tr>';
+    paused.forEach(function(c){h+='<tr class="camp-group-row" data-group="'+gid+'">'+buildCampaignRow(c).replace(/^<tr>/,'').replace(/<\/tr>$/,'')+'</tr>'});
+  }
+  // Other (completed, unknown, etc.): collapsed group
+  if(other.length){
+    var gid2='cg'+(_campGroupId++);
+    h+='<tr class="camp-group-hdr" onclick="toggleCampGroup(this,\''+gid2+'\')">';
+    h+='<td colspan="8"><span class="camp-chev">&#9658;</span>Other<span class="camp-group-count">('+other.length+')</span></td></tr>';
+    other.forEach(function(c){h+='<tr class="camp-group-row" data-group="'+gid2+'">'+buildCampaignRow(c).replace(/^<tr>/,'').replace(/<\/tr>$/,'')+'</tr>'});
+  }
   h+='</tbody></table>';
   return h;
+}
+function toggleCampGroup(hdr,gid){
+  var isOpen=hdr.classList.toggle('open');
+  var rows=hdr.closest('table').querySelectorAll('tr[data-group="'+gid+'"]');
+  rows.forEach(function(r){isOpen?r.classList.add('visible'):r.classList.remove('visible')});
 }
 function buildAlerts(name,d){
   var alerts=[],kpi=KPI[name]||{};
