@@ -660,7 +660,7 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
-:root{
+:root,html[data-theme="dark"]{
   --bg:#0c0c0e;--bg-el:#161618;--bg-hov:#1f1f22;--bg-sel:#1a1e35;
   --bd:#2a2a2e;--bd-s:#3a3a3e;
   --tx1:#f0f0f0;--tx2:#909090;--tx3:#7a7a7e;
@@ -670,6 +670,30 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
   --sh-md:0 4px 12px rgba(0,0,0,.3);
   --sh-lg:0 10px 25px -5px rgba(0,0,0,.35);
 }
+html[data-theme="light"]{
+  --bg:#f5f5f7;--bg-el:#ffffff;--bg-hov:#f0f0f2;--bg-sel:#e8eeff;
+  --bd:#e0e0e4;--bd-s:#d0d0d4;
+  --tx1:#1a1a1a;--tx2:#6b6b6b;--tx3:#8a8a8e;
+  --blue:#2756f7;--blue-h:#1679fa;--blue-bg:rgba(39,86,247,.1);
+  --green:#1a8a3e;--amber:#b87a00;--red:#c33939;
+  --sh:0 0.6px 0.6px -1.25px rgba(0,0,0,.06),0 2.3px 2.3px -2.5px rgba(0,0,0,.05),0 10px 10px -3.75px rgba(0,0,0,.03);
+  --sh-md:0 4px 12px rgba(0,0,0,.08);
+  --sh-lg:0 10px 25px -5px rgba(0,0,0,.1);
+}
+html[data-theme="light"] .cell-val.g{color:#1a8a3e}
+html[data-theme="light"] .cell-val.a{color:#b87a00}
+html[data-theme="light"] .cell-val.r{color:#c33939}
+html[data-theme="light"] .exp-kpi-val.g{color:#1a8a3e}
+html[data-theme="light"] .exp-kpi-val.a{color:#b87a00}
+html[data-theme="light"] .exp-kpi-val.r{color:#c33939}
+html[data-theme="light"] .pill-g{background:rgba(26,138,62,.08);color:#1a8a3e;border-color:rgba(26,138,62,.2)}
+html[data-theme="light"] .pill-a{background:rgba(184,122,0,.08);color:#b87a00;border-color:rgba(184,122,0,.2)}
+html[data-theme="light"] .pill-r{background:rgba(195,57,57,.08);color:#c33939;border-color:rgba(195,57,57,.2)}
+html[data-theme="light"] .chip.c-red{color:#c33939}
+html[data-theme="light"] .chip.c-amber{color:#b87a00}
+html[data-theme="light"] .chip.c-green{color:#1a8a3e}
+html[data-theme="light"] .camp-group-hdr:hover{background:rgba(0,0,0,.03)}
+html[data-theme="light"] .skel{background:linear-gradient(90deg,#e8e8ec 25%,#f0f0f4 50%,#e8e8ec 75%);background-size:200% 100%}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{font-size:14px}
 body{background:var(--bg);color:var(--tx1);font-family:'Inter',sans-serif;line-height:1.5;font-variant-numeric:tabular-nums;min-height:100vh}
@@ -683,6 +707,9 @@ body{background:var(--bg);color:var(--tx1);font-family:'Inter',sans-serif;line-h
 .topbar-mid{font-size:12px;color:var(--tx3);font-family:'Space Mono',monospace}
 .btn{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 18px;border-radius:12px;border:none;background:linear-gradient(180deg,#1679fa -23%,#0a61d1 100%);color:#fff;font-size:13px;font-weight:600;cursor:pointer;transition:opacity .15s,transform .1s;font-family:'Inter',sans-serif;box-shadow:0 2px 8px rgba(22,121,250,.25)}
 .btn:hover{opacity:.92;transform:translateY(-1px)}
+/* Theme toggle */
+.theme-btn{width:36px;height:36px;border-radius:8px;border:1px solid var(--bd);background:var(--bg-el);color:var(--tx2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;transition:background .15s,border-color .15s;flex-shrink:0}
+.theme-btn:hover{background:var(--bg-hov);border-color:var(--bd-s)}
 .btn.loading .icon-ref{display:none}
 .btn .spin{display:none;width:12px;height:12px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite}
 .btn.loading .spin{display:block}
@@ -807,8 +834,23 @@ tr.expand-row.visible{display:table-row}
 .card-stack .m-card.expanded .m-card-detail{display:block}
 .card-stack .m-card-detail .exp-kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .card-stack .m-card-detail .exp-kpi{min-width:auto}
+/* Campaign table → card transform on mobile */
 .card-stack .m-card-detail .camp-table{font-size:11px;min-width:0}
-.card-stack .m-card-detail .camp-table th,.card-stack .m-card-detail .camp-table td{padding:8px 6px;font-size:11px}
+.card-stack .m-card-detail .camp-table thead{display:none}
+.card-stack .m-card-detail .camp-table tbody tr:not(.camp-group-hdr):not(.camp-group-row){display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;padding:10px 0;border-bottom:1px solid var(--bd)}
+.card-stack .m-card-detail .camp-table tbody tr:not(.camp-group-hdr):not(.camp-group-row) td{padding:0;border:none;height:auto;white-space:normal;text-align:left}
+.card-stack .m-card-detail .camp-table tbody tr:not(.camp-group-hdr):not(.camp-group-row) td::before{content:attr(data-label);display:block;font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--tx3);font-family:'Space Mono',monospace}
+.card-stack .m-card-detail .camp-table tbody tr:not(.camp-group-hdr):not(.camp-group-row) td:first-child{grid-column:1/-1}
+.card-stack .m-card-detail .camp-table tbody tr:not(.camp-group-hdr):not(.camp-group-row) td.num{text-align:left}
+/* Campaign group headers in mobile cards */
+.card-stack .m-card-detail .camp-group-hdr{display:block!important}
+.card-stack .m-card-detail .camp-group-hdr td{display:block;padding:10px 0!important;height:auto;border-bottom:1px solid var(--bd)}
+.card-stack .m-card-detail .camp-group-row{display:none}
+.card-stack .m-card-detail .camp-group-row.visible{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;padding:10px 0;border-bottom:1px solid var(--bd)}
+.card-stack .m-card-detail .camp-group-row.visible td{padding:0;border:none;height:auto;white-space:normal;text-align:left}
+.card-stack .m-card-detail .camp-group-row.visible td::before{content:attr(data-label);display:block;font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--tx3);font-family:'Space Mono',monospace}
+.card-stack .m-card-detail .camp-group-row.visible td:first-child{grid-column:1/-1}
+.card-stack .m-card-detail .camp-group-row.visible td.num{text-align:left}
 @media(max-width:768px){.shell{padding:0 16px 24px}.exp-kpis{flex-direction:column}}
 @media(max-width:640px){
   .tbl-wrap{display:none}
@@ -824,10 +866,13 @@ tr.expand-row.visible{display:table-row}
 <div class="topbar">
   <div class="logo"><span class="logo-icon"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C8 7 4 10 4 14a8 8 0 0016 0c0-4-4-7-8-12z" fill="#fff"/></svg></span>Prospeqt</div>
   <span class="topbar-mid" id="ts">--</span>
+  <div style="display:flex;align-items:center;gap:8px">
+  <button class="theme-btn" onclick="toggleTheme()" id="theme-btn" title="Toggle light/dark mode">&#9790;</button>
   <button class="btn" onclick="forceRefresh()" id="refresh-btn">
     <span class="icon-ref">&#x21BB; Refresh</span>
     <span class="spin"></span>
   </button>
+  </div>
 </div>
 <div class="cd-bar"><div class="cd-fill" id="cd-fill"></div></div>
 <div class="chips-wrap">
@@ -979,14 +1024,14 @@ function buildCampaignRow(c){
   var rr=c.sent>0?fmtPct(c.replies/c.sent*100):'--';
   var nc=c.not_contacted!=null?fmt(c.not_contacted):'--';
   var h='<tr>';
-  h+='<td><span class="camp-name" title="'+c.name+'">'+c.name+'</span></td>';
-  h+='<td style="white-space:nowrap"><span class="camp-status-dot '+dotCls+'"></span>'+(isActive?'Active':'Paused')+'</td>';
-  h+='<td class="num">'+fmt(c.sent)+'</td>';
-  h+='<td class="num" style="color:'+(c.not_contacted>0?'#d97706':'var(--tx3)')+'">'+nc+'</td>';
-  h+='<td class="num" style="color:'+(c.replies>0?'#29753c':'var(--tx3)')+'">'+fmt(c.replies)+'</td>';
-  h+='<td class="num" style="color:'+(c.bounced>0?'#C33939':'var(--tx3)')+'">'+fmt(c.bounced)+'</td>';
-  h+='<td class="num" style="color:'+(c.opps>0?'#29753c':'var(--tx3)')+'">'+fmt(c.opps)+'</td>';
-  h+='<td class="num">'+rr+'</td>';
+  h+='<td data-label="Campaign"><span class="camp-name" title="'+c.name+'">'+c.name+'</span></td>';
+  h+='<td data-label="Status" style="white-space:nowrap"><span class="camp-status-dot '+dotCls+'"></span>'+(isActive?'Active':'Paused')+'</td>';
+  h+='<td data-label="Sent" class="num">'+fmt(c.sent)+'</td>';
+  h+='<td data-label="Remaining" class="num" style="color:'+(c.not_contacted>0?'#d97706':'var(--tx3)')+'">'+nc+'</td>';
+  h+='<td data-label="Replies" class="num" style="color:'+(c.replies>0?'#29753c':'var(--tx3)')+'">'+fmt(c.replies)+'</td>';
+  h+='<td data-label="Bounced" class="num" style="color:'+(c.bounced>0?'#C33939':'var(--tx3)')+'">'+fmt(c.bounced)+'</td>';
+  h+='<td data-label="Opps" class="num" style="color:'+(c.opps>0?'#29753c':'var(--tx3)')+'">'+fmt(c.opps)+'</td>';
+  h+='<td data-label="Reply Rate" class="num">'+rr+'</td>';
   h+='</tr>';
   return h;
 }
@@ -1005,7 +1050,7 @@ function buildCampaignTable(campaigns){
   // Paused: collapsed group
   if(paused.length){
     var gid='cg'+(_campGroupId++);
-    h+='<tr class="camp-group-hdr" onclick="toggleCampGroup(this,\''+gid+'\')">';
+    h+='<tr class="camp-group-hdr" onclick="toggleCampGroup(this,\''+gid+'\',event)">';
     h+='<td colspan="8"><span class="camp-chev">&#9658;</span>Paused<span class="camp-group-count">('+paused.length+')</span></td></tr>';
     paused.forEach(function(c){h+='<tr class="camp-group-row" data-group="'+gid+'">'+buildCampaignRow(c).replace(/^<tr>/,'').replace(/<\/tr>$/,'')+'</tr>'});
   }
@@ -1019,7 +1064,8 @@ function buildCampaignTable(campaigns){
   h+='</tbody></table>';
   return h;
 }
-function toggleCampGroup(hdr,gid){
+function toggleCampGroup(hdr,gid,evt){
+  if(evt){evt.stopPropagation();}
   var isOpen=hdr.classList.toggle('open');
   var rows=hdr.closest('table').querySelectorAll('tr[data-group="'+gid+'"]');
   rows.forEach(function(r){isOpen?r.classList.add('visible'):r.classList.remove('visible')});
@@ -1223,6 +1269,22 @@ function forceRefresh(){
     pollFresh();
   });
 }
+// Theme toggle — persists to localStorage
+function toggleTheme(){
+  var html=document.documentElement;
+  var current=html.getAttribute('data-theme')||'dark';
+  var next=current==='dark'?'light':'dark';
+  html.setAttribute('data-theme',next);
+  localStorage.setItem('theme',next);
+  document.getElementById('theme-btn').innerHTML=next==='dark'?'&#9790;':'&#9728;';
+}
+(function initTheme(){
+  var saved=localStorage.getItem('theme');
+  if(saved){
+    document.documentElement.setAttribute('data-theme',saved);
+    if(saved==='light')document.getElementById('theme-btn').innerHTML='&#9728;';
+  }
+})();
 fetchAndRender();
 </script>
 </body>
