@@ -663,7 +663,7 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
 :root{
   --bg:#0c0c0e;--bg-el:#161618;--bg-hov:#1f1f22;--bg-sel:#1a1e35;
   --bd:#2a2a2e;--bd-s:#3a3a3e;
-  --tx1:#f0f0f0;--tx2:#909090;--tx3:#555558;
+  --tx1:#f0f0f0;--tx2:#909090;--tx3:#7a7a7e;
   --blue:#2756f7;--blue-h:#1679fa;--blue-bg:rgba(39,86,247,.15);
   --green:#34C759;--amber:#f59e0b;--red:#C33939;
   --sh:0 0.6px 0.6px -1.25px rgba(0,0,0,.3),0 2.3px 2.3px -2.5px rgba(0,0,0,.25),0 10px 10px -3.75px rgba(0,0,0,.15);
@@ -732,13 +732,17 @@ td.num{text-align:right;font-family:'Space Mono',monospace;font-size:13px}
 .pill-a{background:rgba(245,158,11,.08);color:#d97706;border:1px solid rgba(245,158,11,.2)}
 .pill-r{background:rgba(195,57,57,.08);color:#C33939;border:1px solid rgba(195,57,57,.2)}
 .pill-m{background:var(--bg-el);color:var(--tx3);border:1px solid var(--bd)}
-/* Skeleton */
-.skel{background:linear-gradient(90deg,#f1f5f9 25%,#e2e8f0 50%,#f1f5f9 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:4px;display:inline-block}
+/* Skeleton — dark-theme compatible */
+.skel{background:linear-gradient(90deg,var(--bg-hov) 25%,var(--bd) 50%,var(--bg-hov) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:4px;display:inline-block}
 @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
 /* Tooltip */
 [data-tip]{position:relative}
 [data-tip]::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:#000;color:#fff;font-size:11px;padding:6px 12px;border-radius:8px;border:none;box-shadow:var(--sh-md);white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .12s;z-index:100;letter-spacing:normal;text-transform:none;font-family:'Inter',sans-serif}
-[data-tip]:hover::after{opacity:1}
+[data-tip]:hover::after,[data-tip]:focus-visible::after{opacity:1}
+/* Focus indicators */
+:focus-visible{outline:2px solid var(--blue);outline-offset:2px;border-radius:4px}
+:focus:not(:focus-visible){outline:none}
+tbody tr:focus-visible{background:var(--bg-sel);box-shadow:inset 3px 0 0 var(--blue)}
 /* Expandable row */
 .row-chevron{display:inline-block;font-size:11px;color:var(--tx3);transition:transform .2s ease;margin-left:4px}
 tbody tr.expanded .row-chevron{transform:rotate(90deg)}
@@ -783,8 +787,36 @@ tr.expand-row.visible{display:table-row}
 .d-alert{padding:10px 14px;border-radius:8px;font-size:12px;line-height:1.6;margin-bottom:8px}
 .d-alert.r{background:rgba(195,57,57,.05);border:1px solid rgba(195,57,57,.15);color:#C33939}
 .d-alert.a{background:rgba(245,158,11,.05);border:1px solid rgba(245,158,11,.15);color:#d97706}
+/* Mobile card stack — replaces table below 640px */
+.card-stack{display:none}
+.card-stack .m-card{background:var(--bg-el);border:1px solid var(--bd);border-radius:12px;padding:16px;margin-bottom:12px;cursor:pointer;transition:background .12s;box-shadow:var(--sh)}
+.card-stack .m-card:active{background:var(--bg-hov)}
+.card-stack .m-card.selected{background:var(--bg-sel);border-color:var(--blue)}
+.card-stack .m-card-hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px}
+.card-stack .m-card-name{font-weight:600;font-size:15px;font-family:'Space Grotesk',sans-serif;letter-spacing:-.01em}
+.card-stack .m-card-plat{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--tx3);font-family:'Space Mono',monospace;margin-bottom:10px}
+.card-stack .m-card-metrics{display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;border-top:1px solid var(--bd);padding-top:10px}
+.card-stack .m-metric-label{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--tx3);font-family:'Space Mono',monospace;margin-bottom:2px}
+.card-stack .m-metric-val{font-size:16px;font-weight:600;font-family:'Space Mono',monospace}
+/* Error card variant */
+.card-stack .m-card.err{background:rgba(195,57,57,.04);border-color:rgba(195,57,57,.2);border-left:3px solid var(--red);cursor:default}
+.card-stack .m-card.err .m-card-err{font-size:12px;color:var(--tx2);border-top:1px solid rgba(195,57,57,.12);padding-top:10px;margin-top:6px}
+.card-stack .m-card.err .m-card-err-msg{color:var(--red);font-weight:500;margin-bottom:2px}
+/* Mobile expand detail in card */
+.card-stack .m-card-detail{display:none;border-top:1px solid var(--bd);margin-top:12px;padding-top:12px}
+.card-stack .m-card.expanded .m-card-detail{display:block}
+.card-stack .m-card-detail .exp-kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.card-stack .m-card-detail .exp-kpi{min-width:auto}
+.card-stack .m-card-detail .camp-table{font-size:11px;min-width:0}
+.card-stack .m-card-detail .camp-table th,.card-stack .m-card-detail .camp-table td{padding:8px 6px;font-size:11px}
 @media(max-width:768px){.shell{padding:0 16px 24px}.exp-kpis{flex-direction:column}}
-@media(max-width:480px){.chips{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px}.col-sm-hide{display:none}}
+@media(max-width:640px){
+  .tbl-wrap{display:none}
+  .card-stack{display:block}
+  .chips{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px}
+  .topbar{height:auto;padding:12px 4px;flex-wrap:wrap;gap:8px}
+  .topbar-mid{font-size:11px;order:3;width:100%;text-align:center}
+}
 </style>
 </head>
 <body>
@@ -829,6 +861,7 @@ tr.expand-row.visible{display:table-row}
     </table>
   </div>
 </div>
+<div class="card-stack" id="card-stack"></div>
 </div>
 <script>
 var REFRESH_MS = REFRESH_INTERVAL_MS;
@@ -866,7 +899,7 @@ function pill(s){
   if(s==='amber')return '<span class="pill pill-a">Watch</span>';
   if(s==='red')  return '<span class="pill pill-r">Action</span>';
   if(s==='loading')return '<span class="pill pill-m"><span class="skel" style="width:40px;height:10px"></span></span>';
-  return '<span class="pill pill-m">Error</span>';
+  return '<span class="pill pill-r">Error</span>';
 }
 function sortedKeys(data){
   var keys=Object.keys(data);
@@ -901,12 +934,13 @@ function renderTable(data){
     var bc=bounceCls(d.bounce_rate||0),oc=oppsCls(d.opps_today||0,d.avg_opps_7d||0);
     var selCls=isExp?' selected':'';
     var expCls=isExp?' expanded':'';
-    rows+='<tr data-name="'+name+'" class="'+selCls+expCls+'" onclick="toggleRow(this,\''+name+'\')">';
+    rows+='<tr data-name="'+name+'" tabindex="0" class="'+selCls+expCls+'" onclick="toggleRow(this,\''+name+'\')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();toggleRow(this,\''+name+'\')}">';
     rows+='<td><div class="client-name">'+name+'</div><div class="client-plat">'+(d.platform||'')+'</div></td>';
     rows+='<td class="col-sm-hide"><span style="font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--tx3)">'+(d.platform==='instantly'?'Instantly':'EmailBison')+'</span></td>';
     rows+='<td class="num"><span class="cell-val '+sc+'">'+fmt(d.sent_today)+'</span>'+trend(d.sent_trend)+'</td>';
     rows+='<td class="num col-sm-hide"><span class="cell-val '+nc+'">'+fmt(d.not_contacted)+'</span></td>';
-    rows+='<td class="num col-sm-hide"><span class="cell-val '+rc+'">'+fmtPct(d.reply_rate_today)+'</span>'+trend(d.reply_trend)+'</td>';
+    var rrDisp=(d.sent_today||0)===0?'--':fmtPct(d.reply_rate_today);
+    rows+='<td class="num col-sm-hide"><span class="cell-val '+((d.sent_today||0)===0?'m':rc)+'">'+rrDisp+'</span>'+((d.sent_today||0)>0?trend(d.reply_trend):'')+'</td>';
     rows+='<td class="num col-sm-hide"><span class="cell-val '+oc+'">'+fmt(d.opps_today)+'</span>'+trend(d.opp_trend)+'</td>';
     rows+='<td class="num col-sm-hide"><span class="cell-val '+bc+'">'+fmtPct(d.bounce_rate)+'</span></td>';
     rows+='<td>'+pill(s)+'</td>';
@@ -1101,9 +1135,61 @@ function startCd(secs){
   fill.classList.remove('run');fill.style.animationDuration=secs+'s';
   void fill.offsetWidth;fill.classList.add('run');
 }
+function renderCards(data){
+  var keys=sortedKeys(data);
+  var h='';
+  keys.forEach(function(name){
+    var d=data[name],s=clientStatus(d),kpi=KPI[name]||{};
+    var isExp=_expanded===name;
+    if(d.error){
+      h+='<div class="m-card err" data-name="'+name+'">';
+      h+='<div class="m-card-hdr"><span class="m-card-name" style="color:var(--tx3)">'+name+'</span>'+pill('error')+'</div>';
+      h+='<div class="m-card-plat">'+(d.platform||'')+'</div>';
+      h+='<div class="m-card-err"><div class="m-card-err-msg">'+d.error+'</div></div>';
+      h+='</div>';
+      return;
+    }
+    var sc=sentCls(d.sent_today||0,kpi.sent),rc=rrCls(d.reply_rate_today||0);
+    var nc=ncCls(d.not_contacted||0,d.sent_today||0,d.avg_sent_7d||0);
+    var bc=bounceCls(d.bounce_rate||0);
+    var rrMobile=(d.sent_today||0)===0?'--':fmtPct(d.reply_rate_today);
+    var rrMobileCls=(d.sent_today||0)===0?'m':rc;
+    h+='<div class="m-card'+(isExp?' selected expanded':'')+'" data-name="'+name+'" onclick="toggleCard(this,\''+name+'\')">';
+    h+='<div class="m-card-hdr"><span class="m-card-name">'+name+'</span>'+pill(s)+'</div>';
+    h+='<div class="m-card-plat">'+(d.platform||'')+'</div>';
+    h+='<div class="m-card-metrics">';
+    h+='<div><div class="m-metric-label">Sent Today</div><div class="m-metric-val cell-val '+sc+'">'+fmt(d.sent_today)+' '+trend(d.sent_trend)+'</div></div>';
+    h+='<div><div class="m-metric-label">Reply Rate</div><div class="m-metric-val cell-val '+rrMobileCls+'">'+rrMobile+'</div></div>';
+    h+='<div><div class="m-metric-label">Leads Left</div><div class="m-metric-val cell-val '+nc+'">'+fmt(d.not_contacted)+'</div></div>';
+    h+='<div><div class="m-metric-label">Bounce</div><div class="m-metric-val cell-val '+bc+'">'+fmtPct(d.bounce_rate)+'</div></div>';
+    h+='</div>';
+    // Inline expand detail
+    h+='<div class="m-card-detail">';
+    if(isExp){h+=buildExpandContent(name,d);}
+    h+='</div>';
+    h+='</div>';
+  });
+  document.getElementById('card-stack').innerHTML=h;
+}
+function toggleCard(card,name){
+  if(_expanded===name){
+    _expanded=null;
+    card.classList.remove('selected','expanded');
+    card.querySelector('.m-card-detail').innerHTML='';
+  } else {
+    // Collapse previous
+    if(_expanded){
+      var prev=document.querySelector('.card-stack .m-card[data-name="'+_expanded+'"]');
+      if(prev){prev.classList.remove('selected','expanded');prev.querySelector('.m-card-detail').innerHTML='';}
+    }
+    _expanded=name;
+    card.classList.add('selected','expanded');
+    card.querySelector('.m-card-detail').innerHTML=buildExpandContent(name,_allData[name]);
+  }
+}
 function render(data){
   _allData=data;
-  renderChips(data);renderTable(data);
+  renderChips(data);renderTable(data);renderCards(data);
   document.getElementById('ts').textContent='Updated '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
 }
 function hasLoading(data){
