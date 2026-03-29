@@ -661,14 +661,14 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#f4f4f4;--bg-el:#ffffff;--bg-hov:#f9f9f9;--bg-sel:#f0f4ff;
-  --bd:#e1e2e3;--bd-s:#d0d1d2;
-  --tx1:#000000;--tx2:#4d4d4d;--tx3:#909090;
-  --blue:#2756f7;--blue-h:#1679fa;--blue-bg:#e8eeff;
+  --bg:#0c0c0e;--bg-el:#161618;--bg-hov:#1f1f22;--bg-sel:#1a1e35;
+  --bd:#2a2a2e;--bd-s:#3a3a3e;
+  --tx1:#f0f0f0;--tx2:#909090;--tx3:#555558;
+  --blue:#2756f7;--blue-h:#1679fa;--blue-bg:rgba(39,86,247,.15);
   --green:#34C759;--amber:#f59e0b;--red:#C33939;
-  --sh:0 0.6px 0.6px -1.25px rgba(0,0,0,.09),0 2.3px 2.3px -2.5px rgba(0,0,0,.08),0 10px 10px -3.75px rgba(0,0,0,.03);
-  --sh-md:0 4px 12px rgba(0,0,0,.06);
-  --sh-lg:0 10px 25px -5px rgba(0,0,0,.08);
+  --sh:0 0.6px 0.6px -1.25px rgba(0,0,0,.3),0 2.3px 2.3px -2.5px rgba(0,0,0,.25),0 10px 10px -3.75px rgba(0,0,0,.15);
+  --sh-md:0 4px 12px rgba(0,0,0,.3);
+  --sh-lg:0 10px 25px -5px rgba(0,0,0,.35);
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{font-size:14px}
@@ -681,7 +681,7 @@ body{background:var(--bg);color:var(--tx1);font-family:'Inter',sans-serif;line-h
 .logo-icon{width:28px;height:28px;border-radius:6px;background:linear-gradient(180deg,#FFEAA9 0%,#FFD348 35%,#FF9B1C 65%,#FF4A00 100%);display:flex;align-items:center;justify-content:center}
 .logo-icon svg{width:16px;height:16px}
 .topbar-mid{font-size:12px;color:var(--tx3);font-family:'Space Mono',monospace}
-.btn{display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 18px;border-radius:12px;border:none;background:linear-gradient(180deg,#1679fa -23%,#0a61d1 100%);color:#fff;font-size:13px;font-weight:600;cursor:pointer;transition:opacity .15s,transform .1s;font-family:'Inter',sans-serif;box-shadow:0 2px 8px rgba(22,121,250,.25)}
+.btn{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 18px;border-radius:12px;border:none;background:linear-gradient(180deg,#1679fa -23%,#0a61d1 100%);color:#fff;font-size:13px;font-weight:600;cursor:pointer;transition:opacity .15s,transform .1s;font-family:'Inter',sans-serif;box-shadow:0 2px 8px rgba(22,121,250,.25)}
 .btn:hover{opacity:.92;transform:translateY(-1px)}
 .btn.loading .icon-ref{display:none}
 .btn .spin{display:none;width:12px;height:12px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite}
@@ -707,7 +707,7 @@ body{background:var(--bg);color:var(--tx1);font-family:'Inter',sans-serif;line-h
 .tbl-wrap{border:1px solid var(--bd);border-radius:12px;overflow:hidden;box-shadow:var(--sh);background:var(--bg-el)}
 .tbl-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
 table{width:100%;border-collapse:collapse;min-width:760px;border-spacing:0}
-thead tr{background:#fafafa}
+thead tr{background:var(--bg)}
 thead th{padding:12px 16px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--tx3);text-align:left;white-space:nowrap;cursor:pointer;user-select:none;transition:color .15s;border-bottom:1px solid var(--bd);font-family:'Space Mono',monospace}
 thead th.num{text-align:right}
 thead th:hover{color:var(--tx1)}
@@ -716,7 +716,7 @@ thead th.sort-desc::after{content:' \2193';color:var(--blue)}
 tbody tr{height:52px;cursor:pointer;transition:background .12s}
 tbody tr:hover{background:var(--bg-hov)}
 tbody tr.selected{background:var(--bg-sel);box-shadow:inset 3px 0 0 var(--blue)}
-tbody tr.err-row{cursor:default}
+tbody tr.err-row{cursor:default;box-shadow:inset 3px 0 0 var(--red)}
 tbody tr.err-row:hover{background:transparent}
 td{padding:0 16px;font-size:13px;color:var(--tx1);white-space:nowrap;border-bottom:1px solid var(--bd)}
 tbody tr:last-child td{border-bottom:none}
@@ -745,12 +745,12 @@ tbody tr.expanded .row-chevron{transform:rotate(90deg)}
 tr.expand-row{display:none}
 tr.expand-row.visible{display:table-row}
 .expand-row td{padding:0!important;border:none!important;height:0;line-height:0}
-.expand-panel{max-height:0;overflow:hidden;transition:max-height .22s ease;background:#fafafa;border-left:3px solid var(--blue)}
+.expand-panel{max-height:0;overflow:hidden;transition:max-height .22s ease;background:var(--bg-el);border-left:3px solid var(--blue)}
 .expand-panel.open{max-height:2000px}
 .expand-inner{padding:24px 28px 28px}
 /* KPI cards row */
 .exp-kpis{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:24px}
-.exp-kpi{background:#fff;border:1px solid var(--bd);border-radius:12px;padding:16px 20px;flex:1;min-width:140px;box-shadow:var(--sh)}
+.exp-kpi{background:var(--bg-el);border:1px solid var(--bd);border-radius:12px;padding:16px 20px;flex:1;min-width:140px;box-shadow:var(--sh)}
 .exp-kpi-label{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--tx3);font-weight:600;margin-bottom:6px;font-family:'Space Mono',monospace}
 .exp-kpi-val{font-size:24px;font-weight:700;font-family:'Space Grotesk',sans-serif;letter-spacing:-.03em;line-height:1.1;color:var(--tx1)}
 .exp-kpi-val.g{color:#29753c}.exp-kpi-val.a{color:#d97706}.exp-kpi-val.r{color:#C33939}
@@ -761,7 +761,7 @@ tr.expand-row.visible{display:table-row}
 /* Campaign sub-table — matches client-level table styling */
 .exp-section-label{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--tx3);font-weight:600;margin-bottom:12px;font-family:'Space Mono',monospace}
 .camp-table{width:100%;border-collapse:collapse;font-size:13px;background:var(--bg-el);border-radius:12px;overflow:hidden;border:1px solid var(--bd);box-shadow:var(--sh)}
-.camp-table th{padding:12px 16px;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--tx3);font-weight:600;text-align:left;border-bottom:1px solid var(--bd);font-family:'Space Mono',monospace;background:#fafafa}
+.camp-table th{padding:12px 16px;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--tx3);font-weight:600;text-align:left;border-bottom:1px solid var(--bd);font-family:'Space Mono',monospace;background:var(--bg)}
 .camp-table th.num{text-align:right}
 .camp-table td{padding:0 16px;color:var(--tx1);border-bottom:1px solid var(--bd);vertical-align:middle;height:52px;font-size:13px;white-space:nowrap}
 .camp-table td.num{text-align:right;font-family:'Space Mono',monospace;font-size:13px}
@@ -772,7 +772,7 @@ tr.expand-row.visible{display:table-row}
 .camp-status-active{background:#22c55e}.camp-status-paused{background:#94a3b8}
 /* Campaign group headers */
 .camp-group-hdr{cursor:pointer;user-select:none;transition:background .12s}
-.camp-group-hdr:hover{background:rgba(0,0,0,.03)}
+.camp-group-hdr:hover{background:rgba(255,255,255,.04)}
 .camp-group-hdr td{padding:0 16px!important;height:48px;font-size:13px;font-weight:600;color:var(--tx2);border-bottom:1px solid var(--bd);font-family:'Space Grotesk',sans-serif}
 .camp-group-hdr .camp-chev{display:inline-block;font-size:9px;color:var(--tx3);margin-right:8px;transition:transform .2s}
 .camp-group-hdr.open .camp-chev{transform:rotate(90deg)}
@@ -784,7 +784,7 @@ tr.expand-row.visible{display:table-row}
 .d-alert.r{background:rgba(195,57,57,.05);border:1px solid rgba(195,57,57,.15);color:#C33939}
 .d-alert.a{background:rgba(245,158,11,.05);border:1px solid rgba(245,158,11,.15);color:#d97706}
 @media(max-width:768px){.shell{padding:0 16px 24px}.exp-kpis{flex-direction:column}}
-@media(max-width:480px){.chips{display:none}}
+@media(max-width:480px){.chips{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px}.col-sm-hide{display:none}}
 </style>
 </head>
 <body>
@@ -811,12 +811,12 @@ tr.expand-row.visible{display:table-row}
       <thead>
         <tr>
           <th data-col="name">Client</th>
-          <th data-col="platform">Platform</th>
+          <th class="col-sm-hide" data-col="platform">Platform</th>
           <th class="num" data-col="sent_today" data-tip="Emails sent today across all active campaigns">Sent Today</th>
-          <th class="num" data-col="not_contacted" data-tip="Leads that haven&#39;t completed the sequence yet (in progress + not contacted)">Remaining</th>
-          <th class="num" data-col="reply_rate_today" data-tip="% of emails sent today that received a reply">Reply Rate</th>
-          <th class="num" data-col="opps_today" data-tip="Positive replies indicating genuine interest">Opps</th>
-          <th class="num" data-col="bounce_rate" data-tip="% of all-time sent emails that bounced">Bounce</th>
+          <th class="num col-sm-hide" data-col="not_contacted" data-tip="Leads that haven&#39;t completed the sequence yet (in progress + not contacted)">Remaining</th>
+          <th class="num col-sm-hide" data-col="reply_rate_today" data-tip="% of emails sent today that received a reply">Reply Rate</th>
+          <th class="num col-sm-hide" data-col="opps_today" data-tip="Positive replies indicating genuine interest">Opps</th>
+          <th class="num col-sm-hide" data-col="bounce_rate" data-tip="% of all-time sent emails that bounced">Bounce</th>
           <th data-col="status" data-tip="Overall health based on KPI thresholds">Status</th>
           <th style="width:32px"></th>
         </tr>
@@ -887,8 +887,12 @@ function renderTable(data){
     if(d.error){
       rows+='<tr class="err-row" data-name="'+name+'">';
       rows+='<td><div class="client-name" style="color:var(--tx3)">'+name+'</div><div class="client-plat">'+(d.platform||'')+'</div></td>';
-      rows+='<td><span style="font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--tx3)">'+(d.platform==='instantly'?'Instantly':'EmailBison')+'</span></td>';
-      rows+='<td class="num" colspan="5"><span style="color:var(--tx3);font-size:12px">'+d.error+'</span></td>';
+      rows+='<td class="col-sm-hide"><span style="font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--tx3)">'+(d.platform==='instantly'?'Instantly':'EmailBison')+'</span></td>';
+      rows+='<td class="num"><span style="color:var(--tx3);font-size:12px">'+d.error+'</span></td>';
+      rows+='<td class="num col-sm-hide"></td>';
+      rows+='<td class="num col-sm-hide"></td>';
+      rows+='<td class="num col-sm-hide"></td>';
+      rows+='<td class="num col-sm-hide"></td>';
       rows+='<td>'+pill('error')+'</td><td></td></tr>';
       return;
     }
@@ -899,12 +903,12 @@ function renderTable(data){
     var expCls=isExp?' expanded':'';
     rows+='<tr data-name="'+name+'" class="'+selCls+expCls+'" onclick="toggleRow(this,\''+name+'\')">';
     rows+='<td><div class="client-name">'+name+'</div><div class="client-plat">'+(d.platform||'')+'</div></td>';
-    rows+='<td><span style="font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--tx3)">'+(d.platform==='instantly'?'Instantly':'EmailBison')+'</span></td>';
+    rows+='<td class="col-sm-hide"><span style="font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--tx3)">'+(d.platform==='instantly'?'Instantly':'EmailBison')+'</span></td>';
     rows+='<td class="num"><span class="cell-val '+sc+'">'+fmt(d.sent_today)+'</span>'+trend(d.sent_trend)+'</td>';
-    rows+='<td class="num"><span class="cell-val '+nc+'">'+fmt(d.not_contacted)+'</span></td>';
-    rows+='<td class="num"><span class="cell-val '+rc+'">'+fmtPct(d.reply_rate_today)+'</span>'+trend(d.reply_trend)+'</td>';
-    rows+='<td class="num"><span class="cell-val '+oc+'">'+fmt(d.opps_today)+'</span>'+trend(d.opp_trend)+'</td>';
-    rows+='<td class="num"><span class="cell-val '+bc+'">'+fmtPct(d.bounce_rate)+'</span></td>';
+    rows+='<td class="num col-sm-hide"><span class="cell-val '+nc+'">'+fmt(d.not_contacted)+'</span></td>';
+    rows+='<td class="num col-sm-hide"><span class="cell-val '+rc+'">'+fmtPct(d.reply_rate_today)+'</span>'+trend(d.reply_trend)+'</td>';
+    rows+='<td class="num col-sm-hide"><span class="cell-val '+oc+'">'+fmt(d.opps_today)+'</span>'+trend(d.opp_trend)+'</td>';
+    rows+='<td class="num col-sm-hide"><span class="cell-val '+bc+'">'+fmtPct(d.bounce_rate)+'</span></td>';
     rows+='<td>'+pill(s)+'</td>';
     rows+='<td style="text-align:center"><span class="row-chevron">&#9658;</span></td>';
     rows+='</tr>';
