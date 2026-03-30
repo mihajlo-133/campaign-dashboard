@@ -834,23 +834,34 @@ tr.expand-row.visible{display:table-row}
 .card-stack .m-card.expanded .m-card-detail{display:block}
 .card-stack .m-card-detail .exp-kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .card-stack .m-card-detail .exp-kpi{min-width:auto}
-/* Campaign table → card transform on mobile */
-.card-stack .m-card-detail .camp-table{display:block;font-size:12px;min-width:0;width:100%;border:none;box-shadow:none;background:transparent}
+/* Campaign table → fully flattened on mobile (no grid-on-tr, pure block) */
+.card-stack .m-card-detail .camp-table,
+.card-stack .m-card-detail .camp-table thead,
+.card-stack .m-card-detail .camp-table tbody,
+.card-stack .m-card-detail .camp-table tr,
+.card-stack .m-card-detail .camp-table th,
+.card-stack .m-card-detail .camp-table td{display:block;width:100%;border:none;padding:0;height:auto;background:transparent;box-shadow:none}
 .card-stack .m-card-detail .camp-table thead{display:none}
-.card-stack .m-card-detail .camp-table tbody{display:block}
-/* All data rows get card layout */
-.card-stack .m-card-detail .camp-table tbody tr:not(.camp-group-hdr):not(.camp-group-row){display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;padding:12px 0;border-bottom:1px solid var(--bd)}
-.card-stack .m-card-detail .camp-group-row{display:none!important}
-.card-stack .m-card-detail .camp-group-row.visible{display:grid!important;grid-template-columns:1fr 1fr;gap:4px 12px;padding:12px 0;border-bottom:1px solid var(--bd)}
-/* Shared td styles for card layout */
-.card-stack .m-card-detail .camp-table tbody tr:not(.camp-group-hdr) td{display:block;padding:0;border:none;height:auto;white-space:normal;text-align:left;font-size:12px}
-.card-stack .m-card-detail .camp-table tbody tr:not(.camp-group-hdr) td[data-label]::before{content:attr(data-label);display:block;font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--tx3);font-family:'Space Mono',monospace;margin-bottom:1px}
-.card-stack .m-card-detail .camp-table tbody tr:not(.camp-group-hdr) td:first-child{grid-column:1/-1}
-.card-stack .m-card-detail .camp-table tbody tr:not(.camp-group-hdr) td.num{text-align:left}
+.card-stack .m-card-detail .camp-table{font-size:12px;min-width:0;overflow:visible}
+/* Each campaign row becomes a mini-card */
+.card-stack .m-card-detail .camp-table tbody tr:not(.camp-group-hdr):not(.camp-group-row){padding:12px;margin-bottom:8px;border:1px solid var(--bd);border-radius:8px;background:var(--bg-hov)}
+.card-stack .m-card-detail .camp-table tbody tr:not(.camp-group-hdr):not(.camp-group-row) td{white-space:normal;text-align:left;font-size:12px;padding:2px 0}
+.card-stack .m-card-detail .camp-table tbody tr:not(.camp-group-hdr):not(.camp-group-row) td[data-label]::before{content:attr(data-label) ": ";font-size:10px;color:var(--tx3);font-family:'Space Mono',monospace;font-weight:400}
+.card-stack .m-card-detail .camp-table tbody tr:not(.camp-group-hdr):not(.camp-group-row) td:first-child{font-size:13px;font-weight:600;padding-bottom:6px;border-bottom:1px solid var(--bd);margin-bottom:6px}
+.card-stack .m-card-detail .camp-table tbody tr:not(.camp-group-hdr):not(.camp-group-row) td:first-child::before{display:none}
+.card-stack .m-card-detail .camp-table tbody tr:not(.camp-group-hdr):not(.camp-group-row) td.num{text-align:left}
 .card-stack .m-card-detail .camp-name{white-space:normal;word-break:break-word;font-size:12px}
-/* Campaign group headers in mobile cards */
-.card-stack .m-card-detail .camp-group-hdr{display:block!important}
-.card-stack .m-card-detail .camp-group-hdr td{display:block;padding:10px 0!important;height:auto;border-bottom:1px solid var(--bd)}
+/* Campaign group rows (paused/other) — hidden by default, mini-card when visible */
+.card-stack .m-card-detail .camp-group-row{display:none!important}
+.card-stack .m-card-detail .camp-group-row.visible{display:block!important;padding:12px;margin-bottom:8px;border:1px solid var(--bd);border-radius:8px;background:var(--bg-hov)}
+.card-stack .m-card-detail .camp-group-row.visible td{white-space:normal;text-align:left;font-size:12px;padding:2px 0}
+.card-stack .m-card-detail .camp-group-row.visible td[data-label]::before{content:attr(data-label) ": ";font-size:10px;color:var(--tx3);font-family:'Space Mono',monospace;font-weight:400}
+.card-stack .m-card-detail .camp-group-row.visible td:first-child{font-size:13px;font-weight:600;padding-bottom:6px;border-bottom:1px solid var(--bd);margin-bottom:6px}
+.card-stack .m-card-detail .camp-group-row.visible td:first-child::before{display:none}
+.card-stack .m-card-detail .camp-group-row.visible td.num{text-align:left}
+/* Campaign group headers */
+.card-stack .m-card-detail .camp-group-hdr{padding:10px 0!important;border-bottom:1px solid var(--bd);margin-top:4px}
+.card-stack .m-card-detail .camp-group-hdr td{padding:0!important;height:auto}
 .card-stack .m-card-detail .camp-group-hdr.open .camp-chev{transform:rotate(90deg)}
 @media(max-width:768px){.shell{padding:0 16px 24px}.exp-kpis{flex-direction:column}}
 @media(max-width:640px){
