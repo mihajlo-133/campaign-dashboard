@@ -341,6 +341,30 @@ def fetch_instantly_data(client_name: str, api_key: str) -> dict:
 EB_BASE = "https://send.prospeqt.co/api"
 
 
+def _eb_parse_events_timeseries(series: list) -> dict:
+    """Parse campaign-events/stats time-series response into flat totals.
+
+    Response format: [{"label": "Sent", "dates": [["2026-03-23", 5], ...]}, ...]
+    Returns: {"sent": N, "replied": N, "interested": N, "bounced": N, "opens": N}
+    """
+    label_map = {
+        "Sent": "sent",
+        "Replied": "replied",
+        "Interested": "interested",
+        "Bounced": "bounced",
+        "Total Opens": "opens",
+        "Unique Opens": "unique_opens",
+        "Unsubscribed": "unsubscribed",
+    }
+    totals: dict = {}
+    for item in series:
+        label = item.get("label", "")
+        key = label_map.get(label)
+        if key:
+            totals[key] = sum(v for _, v in item.get("dates", []))
+    return totals
+
+
 def fetch_emailbison_data(client_name: str, api_key: str) -> dict:
     """Fetch campaign analytics for a single EmailBison workspace."""
     headers = {
@@ -351,82 +375,78 @@ def fetch_emailbison_data(client_name: str, api_key: str) -> dict:
     today = datetime.now(timezone.utc).date()
     seven_ago = today - timedelta(days=7)
 
-    # 1. Campaign list
-    campaigns_all = []
-    page = 1
-    while True:
-        data = _http_get(f"{EB_BASE}/campaigns?page={page}", headers)
-        items = data.get("data", []) if isinstance(data, dict) else []
-        campaigns_all.extend(items)
-        meta = data.get("meta", {}) if isinstance(data, dict) else {}
-        if page >= meta.get("last_page", 1):
-            break
-        page += 1
+    # 1. Campaign list — no pagination, returns flat data array
+    raw = _http_get(f"{EB_BASE}/campaigns", headers)
+    campaigns_all = raw.get("data", []) if isinstance(raw, dict) else []
 
-    active_campaigns = [c for c in campaigns_all if c.get("status") == "active"]
+    # Status is capitalized ("Active", "Paused", etc.) — compare case-insensitively
+    active_campaigns = [c for c in campaigns_all if c.get("status", "").lower() == "active"]
+    all_cids = [c["id"] for c in campaigns_all if c.get("id")]
 
-    # 2. Aggregate stats via campaign-events endpoint
-    stats_url = (
-        f"{EB_BASE}/campaign-events/stats"
-        f"?start_date={seven_ago.isoformat()}&end_date={today.isoformat()}"
-    )
-    stats = _http_get(stats_url, headers) or {}
-    stats_data = stats.get("data", stats) if isinstance(stats, dict) else {}
+    # 2. Aggregate stats via campaign-events/stats.
+    # REQUIRED: must pass at least one campaign_id. Builds ?campaign_ids[]=N&... query.
+    # Response is a time-series array — parse with _eb_parse_events_timeseries().
+    def _eb_events_stats(start: str, end: str, cids: list) -> dict:
+        if not cids:
+            return {}
+        cid_params = "&".join(f"campaign_ids[]={cid}" for cid in cids)
+        url = f"{EB_BASE}/campaign-events/stats?start_date={start}&end_date={end}&{cid_params}"
+        resp = _http_get(url, headers) or {}
+        series = resp.get("data", []) if isinstance(resp, dict) else []
+        return _eb_parse_events_timeseries(series)
 
-    # Today's campaign-events stats
-    today_url = (
-        f"{EB_BASE}/campaign-events/stats"
-        f"?start_date={today.isoformat()}&end_date={today.isoformat()}"
-    )
-    today_stats_raw = _http_get(today_url, headers) or {}
-    today_stats = today_stats_raw.get("data", today_stats_raw) if isinstance(today_stats_raw, dict) else {}
+    stats_7d    = _eb_events_stats(seven_ago.isoformat(), today.isoformat(), all_cids)
+    stats_today = _eb_events_stats(today.isoformat(), today.isoformat(), all_cids)
 
-    sent_today   = today_stats.get("sent", 0) or 0
-    replies_today = today_stats.get("replies", 0) or 0
-    opps_today   = today_stats.get("opportunities", 0) or 0
-    opens_today  = today_stats.get("opens", 0) or 0
+    sent_today    = stats_today.get("sent", 0) or 0
+    replies_today = stats_today.get("replied", 0) or 0
+    opps_today    = stats_today.get("interested", 0) or 0
+    opens_today   = stats_today.get("opens", 0) or 0
 
-    # 7-day totals (divide by 7 for avg, subtract today)
-    sent_7d     = (stats_data.get("sent", 0) or 0) - sent_today
-    replies_7d  = (stats_data.get("replies", 0) or 0) - replies_today
-    opps_7d     = (stats_data.get("opportunities", 0) or 0) - opps_today
-    days_in_range = 6  # 7 days minus today
+    # 7-day totals excluding today
+    sent_7d    = (stats_7d.get("sent", 0) or 0) - sent_today
+    replies_7d = (stats_7d.get("replied", 0) or 0) - replies_today
+    opps_7d    = (stats_7d.get("interested", 0) or 0) - opps_today
+    days_in_range = 6  # 7-day window minus today
 
     avg_sent_7d  = sent_7d / days_in_range if days_in_range > 0 else 0.0
     avg_opps_7d  = opps_7d / days_in_range if days_in_range > 0 else 0.0
     avg_reply_7d = replies_7d / days_in_range if days_in_range > 0 else 0.0
 
-    # 3. Not-contacted leads
-    nc_data = _http_get(f"{EB_BASE}/leads?status=not_contacted&page=1", headers) or {}
+    # 3. Not-contacted leads — correct filter param is filters[lead_campaign_status]=never_contacted
+    nc_data = _http_get(
+        f"{EB_BASE}/leads?filters%5Blead_campaign_status%5D=never_contacted&page=1", headers
+    ) or {}
     not_contacted_meta = nc_data.get("meta", {}) if isinstance(nc_data, dict) else {}
-    # total leads with not_contacted status
     not_contacted = not_contacted_meta.get("total", 0) or 0
 
     # Reply rates
     reply_rate_today = (replies_today / sent_today * 100) if sent_today > 0 else 0.0
     reply_rate_7d    = (avg_reply_7d / avg_sent_7d * 100) if avg_sent_7d > 0 else 0.0
 
-    # Bounced / total sent from 7d stats
-    bounced_7d = stats_data.get("bounced", 0) or 0
-    total_sent_7d = stats_data.get("sent", 0) or 0
-    bounce_rate = (bounced_7d / total_sent_7d * 100) if total_sent_7d > 0 else 0.0
+    # Bounce rate from 7d stats
+    bounced_7d    = stats_7d.get("bounced", 0) or 0
+    total_sent_7d = stats_7d.get("sent", 0) or 0
+    bounce_rate   = (bounced_7d / total_sent_7d * 100) if total_sent_7d > 0 else 0.0
 
     opp_trend   = _trend(opps_today, avg_opps_7d)
     reply_trend = _trend(reply_rate_today, reply_rate_7d)
     sent_trend  = _trend(sent_today, avg_sent_7d)
 
-    # 4. Per-campaign stats — active campaigns + up to 5 most recent paused
-    active_cids = [c for c in campaigns_all if c.get("status") == "active"]
-    paused_cids = [c for c in campaigns_all if c.get("status") != "active"][:5]
+    # 4. Per-campaign stats — active campaigns + up to 5 most recent non-active
+    # Uses POST /api/campaigns/{id}/stats with JSON body (GET returns 405)
+    # Response fields: emails_sent, interested, bounced, unique_replies_per_contact
+    active_cids = [c for c in campaigns_all if c.get("status", "").lower() == "active"]
+    paused_cids = [c for c in campaigns_all if c.get("status", "").lower() != "active"][:5]
     campaigns_to_fetch = active_cids + paused_cids
 
     def _fetch_eb_campaign_stats(c: dict) -> dict:
         cid = c.get("id", "")
         try:
-            s = _http_get(
-                f"{EB_BASE}/campaigns/{cid}/stats"
-                f"?start_date={seven_ago.isoformat()}&end_date={today.isoformat()}",
+            s = _http_post(
+                f"{EB_BASE}/campaigns/{cid}/stats",
                 headers,
+                {"start_date": seven_ago.isoformat(), "end_date": today.isoformat()},
             ) or {}
             s_data = s.get("data", s) if isinstance(s, dict) else {}
         except Exception:
@@ -435,10 +455,10 @@ def fetch_emailbison_data(client_name: str, api_key: str) -> dict:
             "name":    c.get("name", "Unknown"),
             "id":      cid,
             "status":  c.get("status", "unknown"),
-            "sent":    s_data.get("sent", 0) or 0,
-            "replies": s_data.get("replies", 0) or 0,
+            "sent":    s_data.get("emails_sent", 0) or 0,
+            "replies": s_data.get("unique_replies_per_contact", 0) or 0,
             "bounced": s_data.get("bounced", 0) or 0,
-            "opps":    s_data.get("opportunities", 0) or 0,
+            "opps":    s_data.get("interested", 0) or 0,
         }
 
     # Fetch per-campaign stats in parallel (bounded by campaigns_to_fetch size)
