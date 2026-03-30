@@ -811,7 +811,8 @@ td{padding:0 16px;font-size:13px;color:var(--tx1);white-space:nowrap;border-bott
 tbody tr:last-child td{border-bottom:none}
 td.num{text-align:right;font-family:'Space Mono',monospace;font-size:13px}
 .client-name{font-weight:600;font-size:13px;letter-spacing:-.01em;font-family:'Space Grotesk',sans-serif}
-.client-plat{font-size:11px;color:var(--tx3);letter-spacing:.02em;text-transform:uppercase;margin-top:1px;font-family:'Space Mono',monospace}
+.client-plat{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--tx3);letter-spacing:.02em;text-transform:uppercase;margin-top:1px;font-family:'Space Mono',monospace}
+.plat-logo{width:14px;height:14px;border-radius:3px;object-fit:contain;flex-shrink:0}
 .cell-val{font-family:'Space Mono',monospace}
 .cell-val.g{color:#29753c}.cell-val.a{color:#d97706}.cell-val.r{color:#C33939}.cell-val.m{color:var(--tx3)}
 .trend{font-size:10px;margin-left:3px}
@@ -883,7 +884,8 @@ tr.expand-row.visible{display:table-row}
 .card-stack .m-card.selected{background:var(--bg-sel);border-color:var(--blue)}
 .card-stack .m-card-hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px}
 .card-stack .m-card-name{font-weight:600;font-size:15px;font-family:'Space Grotesk',sans-serif;letter-spacing:-.01em}
-.card-stack .m-card-plat{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--tx3);font-family:'Space Mono',monospace;margin-bottom:10px}
+.card-stack .m-card-plat{display:flex;align-items:center;gap:5px;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--tx3);font-family:'Space Mono',monospace;margin-bottom:10px}
+.card-stack .plat-logo{width:13px;height:13px;border-radius:3px}
 .card-stack .m-card-metrics{display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;border-top:1px solid var(--bd);padding-top:10px}
 .card-stack .m-metric-label{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--tx3);font-family:'Space Mono',monospace;margin-bottom:2px}
 .card-stack .m-metric-val{font-size:16px;font-weight:600;font-family:'Space Mono',monospace}
@@ -1001,6 +1003,9 @@ var KPI = {
   'RankZero':          {sent:2000, not_contacted:2000,  opps_per_day:2.0, reply_rate:1.5},
   'SwishFunding (EB)': {sent:2000, not_contacted:2000,  opps_per_day:2.0, reply_rate:1.5}
 };
+var PLAT_LOGOS={instantly:'https://instantly.ai/blog/content/images/2024/05/cleaned_rounded.png',emailbison:'https://media.licdn.com/dms/image/v2/D4E0BAQGpOS_Byh2OIw/company-logo_200_200/company-logo_200_200/0/1732486612419?e=2147483647&v=beta&t=6FgrEcbuxBgMDPbTksuPOVFkhApor1pUxpM3EJLAiOs'};
+function platLabel(p){var label=p==='instantly'?'Instantly':'EmailBison';var src=PLAT_LOGOS[p];if(!src)return label;return '<img class="plat-logo" src="'+src+'" alt="'+label+'"> '+label}
+function platIcon(p){var src=PLAT_LOGOS[p];var label=p==='instantly'?'Instantly':'EmailBison';if(!src)return '';return '<img class="plat-logo" src="'+src+'" alt="'+label+'">'}
 function fmt(n){return n==null?'--':Number(n).toLocaleString('en-US')}
 function fmtPct(n,d){return n==null?'--':Number(n).toFixed(d!=null?d:2)+'%'}
 function fmtDec(n,d){return n==null?'--':Number(n).toFixed(d!=null?d:1)}
@@ -1041,8 +1046,8 @@ function renderTable(data){
     var isExp=_expanded===name;
     if(d.error){
       rows+='<tr class="err-row" data-name="'+name+'">';
-      rows+='<td><div class="client-name" style="color:var(--tx3)">'+name+'</div><div class="client-plat">'+(d.platform||'')+'</div></td>';
-      rows+='<td class="col-sm-hide"><span style="font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--tx3)">'+(d.platform==='instantly'?'Instantly':'EmailBison')+'</span></td>';
+      rows+='<td><div class="client-name" style="color:var(--tx3)">'+name+'</div><div class="client-plat">'+platLabel(d.platform)+'</div></td>';
+      rows+='<td class="col-sm-hide"><span style="font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--tx3);display:inline-flex;align-items:center;gap:4px">'+platLabel(d.platform)+'</span></td>';
       rows+='<td class="num"><span style="color:var(--tx3);font-size:12px">'+d.error+'</span></td>';
       rows+='<td class="num col-sm-hide"></td>';
       rows+='<td class="num col-sm-hide"></td>';
@@ -1057,8 +1062,8 @@ function renderTable(data){
     var selCls=isExp?' selected':'';
     var expCls=isExp?' expanded':'';
     rows+='<tr data-name="'+name+'" tabindex="0" class="'+selCls+expCls+'" onclick="toggleRow(this,\''+name+'\')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();toggleRow(this,\''+name+'\')}">';
-    rows+='<td><div class="client-name">'+name+'</div><div class="client-plat">'+(d.platform||'')+'</div></td>';
-    rows+='<td class="col-sm-hide"><span style="font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--tx3)">'+(d.platform==='instantly'?'Instantly':'EmailBison')+'</span></td>';
+    rows+='<td><div class="client-name">'+name+'</div><div class="client-plat">'+platLabel(d.platform)+'</div></td>';
+    rows+='<td class="col-sm-hide"><span style="font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--tx3);display:inline-flex;align-items:center;gap:4px">'+platLabel(d.platform)+'</span></td>';
     rows+='<td class="num"><span class="cell-val '+sc+'">'+fmt(d.sent_today)+'</span>'+trend(d.sent_trend)+'</td>';
     rows+='<td class="num col-sm-hide"><span class="cell-val '+nc+'">'+fmt(d.not_contacted)+'</span></td>';
     var rrDisp=(d.sent_today||0)===0?'--':fmtPct(d.reply_rate_today);
@@ -1267,7 +1272,7 @@ function renderCards(data){
     if(d.error){
       h+='<div class="m-card err" data-name="'+name+'">';
       h+='<div class="m-card-hdr"><span class="m-card-name" style="color:var(--tx3)">'+name+'</span>'+pill('error')+'</div>';
-      h+='<div class="m-card-plat">'+(d.platform||'')+'</div>';
+      h+='<div class="m-card-plat">'+platLabel(d.platform)+'</div>';
       h+='<div class="m-card-err"><div class="m-card-err-msg">'+d.error+'</div></div>';
       h+='</div>';
       return;
@@ -1279,7 +1284,7 @@ function renderCards(data){
     var rrMobileCls=(d.sent_today||0)===0?'m':rc;
     h+='<div class="m-card'+(isExp?' selected expanded':'')+'" data-name="'+name+'" onclick="toggleCard(this,\''+name+'\')">';
     h+='<div class="m-card-hdr"><span class="m-card-name">'+name+'</span>'+pill(s)+'</div>';
-    h+='<div class="m-card-plat">'+(d.platform||'')+'</div>';
+    h+='<div class="m-card-plat">'+platLabel(d.platform)+'</div>';
     h+='<div class="m-card-metrics">';
     h+='<div><div class="m-metric-label">Sent Today</div><div class="m-metric-val cell-val '+sc+'">'+fmt(d.sent_today)+' '+trend(d.sent_trend)+'</div></div>';
     h+='<div><div class="m-metric-label">Reply Rate</div><div class="m-metric-val cell-val '+rrMobileCls+'">'+rrMobile+'</div></div>';
