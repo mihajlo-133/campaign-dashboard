@@ -1376,8 +1376,29 @@ DASHBOARD_HTML = DASHBOARD_HTML.replace("REFRESH_INTERVAL_MS", str(AUTO_REFRESH_
 # HTTP handler
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# Ping log — ring buffer of recent keep-alive pings
+# ---------------------------------------------------------------------------
+
+_ping_log: list = []       # [{ts, source, status}]
+_ping_log_lock = threading.Lock()
+_PING_LOG_MAX = 200
+_server_start_ts = datetime.now(timezone.utc).isoformat()
+
+
+def _record_ping(source: str = "unknown"):
+    with _ping_log_lock:
+        _ping_log.append({
+            "ts": datetime.now(timezone.utc).isoformat(),
+            "source": source,
+        })
+        if len(_ping_log) > _PING_LOG_MAX:
+            _ping_log[:] = _ping_log[-_PING_LOG_MAX:]
+
+
 class Handler(BaseHTTPRequestHandler):
     def do_HEAD(self):
+        _record_ping("head")
         self.send_response(200)
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.end_headers()
@@ -1385,6 +1406,18 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path == "/api/data":
             self._serve_json(get_all_data())
+        elif self.path == "/api/ping":
+            _record_ping(self.headers.get("X-Ping-Source", "get"))
+            self._serve_json({"status": "ok", "ts": datetime.now(timezone.utc).isoformat()})
+        elif self.path == "/api/ping-log":
+            with _ping_log_lock:
+                log_copy = list(_ping_log)
+            self._serve_json({
+                "server_start": _server_start_ts,
+                "total_pings": len(log_copy),
+                "last_ping": log_copy[-1] if log_copy else None,
+                "pings": log_copy,
+            })
         else:
             self._serve_html(DASHBOARD_HTML)
 

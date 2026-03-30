@@ -12,11 +12,15 @@ jobs:
     steps:
       - name: Ping dashboard
         run: |
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "${{ secrets.DASHBOARD_URL }}")
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 \
+            -H "X-Ping-Source: github-actions" \
+            "${{ secrets.DASHBOARD_URL }}/api/ping")
           echo "Response: $STATUS"
           if [ "$STATUS" = "503" ] || [ "$STATUS" = "000" ]; then
             echo "Cold start detected — retrying in 35s..."
             sleep 35
-            STATUS2=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "${{ secrets.DASHBOARD_URL }}")
+            STATUS2=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 \
+              -H "X-Ping-Source: github-actions-retry" \
+              "${{ secrets.DASHBOARD_URL }}/api/ping")
             echo "Retry response: $STATUS2"
           fi
