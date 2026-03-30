@@ -241,14 +241,18 @@ def fetch_instantly_data(client_name: str, api_key: str) -> dict:
     reply_rate_7d    = (avg_replies_7d / avg_sent_7d * 100) if avg_sent_7d > 0 else 0.0
     reply_rate_all   = (total_replies / total_sent * 100) if total_sent > 0 else 0.0
 
-    # Count not-yet-contacted leads using the leads/list API with
-    # FILTER_VAL_NOT_CONTACTED — only for ACTIVE campaigns to avoid timeouts.
+    # Count not-yet-contacted leads in two phases:
+    # Phase 1 (inline): active campaigns only — fast, avoids timeouts
+    # Phase 2 (background): inactive campaigns — merges into cache later
     nc_by_campaign = {}
     for c in active_campaigns:
         cid = c.get("id", "")
         if cid:
             nc_by_campaign[cid] = _count_not_contacted(cid, headers)
     not_contacted = sum(nc_by_campaign.values())
+
+    # Inactive campaigns that still need not-contacted counts
+    inactive_campaigns = [c for c in campaigns if c.get("status") != 1 and c.get("id")]
     total_completed = sum(c.get("completed_count", 0) or 0 for c in analytics)
 
     # Trend direction: compare today vs 7d avg
@@ -323,6 +327,10 @@ def fetch_instantly_data(client_name: str, api_key: str) -> dict:
             }
             for d in sorted(daily_data, key=lambda x: x.get("date", ""))
         ],
+
+        # Pending backfill: inactive campaign IDs needing not-contacted counts
+        "_nc_backfill": [c.get("id") for c in inactive_campaigns],
+        "_nc_api_key":  api_key,
     }
 
 
@@ -565,6 +573,25 @@ def _should_refresh(client_name: str) -> bool:
     return (time.time() - ts) > CACHE_TTL
 
 
+def _backfill_nc(client_name: str, campaign_ids: list, api_key: str) -> None:
+    """Background: count not-contacted leads for inactive campaigns and merge into cache."""
+    headers = {"Authorization": f"Bearer {api_key}"}
+    for cid in campaign_ids:
+        count = _count_not_contacted(cid, headers)
+        if count > 0:
+            with _cache_lock:
+                data = _cache_data.get(client_name)
+                if not data:
+                    return
+                # Update top-level not_contacted total
+                data["not_contacted"] = data.get("not_contacted", 0) + count
+                # Update per-campaign entry
+                for camp in data.get("campaigns", []):
+                    if camp.get("id") == cid:
+                        camp["not_contacted"] = count
+                        break
+
+
 def _fetch_client(client_name: str) -> None:
     """Fetch data for one client and update cache."""
     cfg = CLIENTS[client_name]
@@ -589,10 +616,23 @@ def _fetch_client(client_name: str) -> None:
         result["kpi"]    = KPI_TARGETS.get(client_name, {})
         result["fetched_at"] = datetime.now(timezone.utc).isoformat()
 
+        # Extract backfill info before caching
+        nc_backfill = result.pop("_nc_backfill", [])
+        nc_api_key  = result.pop("_nc_api_key", None)
+
         with _cache_lock:
             _cache_data[client_name]   = result
             _cache_ts[client_name]     = time.time()
             _cache_errors.pop(client_name, None)
+
+        # Phase 2: backfill not-contacted counts for inactive campaigns
+        if nc_backfill and nc_api_key:
+            t = threading.Thread(
+                target=_backfill_nc,
+                args=(client_name, nc_backfill, nc_api_key),
+                daemon=True,
+            )
+            t.start()
 
     except Exception as exc:
         with _cache_lock:
