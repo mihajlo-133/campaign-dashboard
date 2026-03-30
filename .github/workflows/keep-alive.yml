@@ -1,0 +1,22 @@
+name: Keep Alive
+
+on:
+  schedule:
+    - cron: "*/3 * * * *"  # every 3 minutes
+  workflow_dispatch: {}     # manual trigger
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+      - name: Ping dashboard
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "${{ secrets.DASHBOARD_URL }}")
+          echo "Response: $STATUS"
+          if [ "$STATUS" = "503" ] || [ "$STATUS" = "000" ]; then
+            echo "Cold start detected — retrying in 35s..."
+            sleep 35
+            STATUS2=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "${{ secrets.DASHBOARD_URL }}")
+            echo "Retry response: $STATUS2"
+          fi
