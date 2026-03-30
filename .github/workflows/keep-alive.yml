@@ -2,7 +2,7 @@ name: Keep Alive
 
 on:
   schedule:
-    - cron: "*/3 * * * *"  # every 3 minutes
+    - cron: "*/5 * * * *"  # every 5 minutes (GitHub minimum)
   workflow_dispatch: {}     # manual trigger
 
 jobs:
@@ -24,3 +24,13 @@ jobs:
               "${{ secrets.DASHBOARD_URL }}/api/ping")
             echo "Retry response: $STATUS2"
           fi
+
+  keepalive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    if: github.event_name == 'schedule'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: gautamkrishnar/keepalive-workflow@v2
+        with:
+          time_elapsed: 45  # days before auto-commit to prevent 60-day disable
