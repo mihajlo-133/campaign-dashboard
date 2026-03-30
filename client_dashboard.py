@@ -338,7 +338,7 @@ def fetch_instantly_data(client_name: str, api_key: str) -> dict:
 # EmailBison data fetcher
 # ---------------------------------------------------------------------------
 
-EB_BASE = "https://dedi.emailbison.com/api"
+EB_BASE = "https://send.prospeqt.co/api"
 
 
 def fetch_emailbison_data(client_name: str, api_key: str) -> dict:
