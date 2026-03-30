@@ -42,6 +42,7 @@ KPI_TARGETS = {
     "HeyReach":         {"sent": 2000,  "not_contacted": 2000,  "opps_per_day": 2.0,  "reply_rate": 1.5},
     "Kayse":            {"sent": 2000,  "not_contacted": 2000,  "opps_per_day": 2.0,  "reply_rate": 1.5},
     "Prosperly":        {"sent": 2000,  "not_contacted": 2000,  "opps_per_day": 2.0,  "reply_rate": 1.5},
+    "Enavra":           {"sent": 2000,  "not_contacted": 2000,  "opps_per_day": 2.0,  "reply_rate": 1.5},
     "RankZero":         {"sent": 2000,  "not_contacted": 2000,  "opps_per_day": 2.0,  "reply_rate": 1.5},
     "SwishFunding (EB)":{"sent": 2000,  "not_contacted": 2000,  "opps_per_day": 2.0,  "reply_rate": 1.5},
 }
@@ -70,6 +71,7 @@ CLIENTS = {
     "HeyReach":      {"platform": "instantly", "env_var": "INSTANTLY_HEYREACH",      "key_path": "tools/accounts/heyreach-client/instantly.md"},
     "Kayse":         {"platform": "instantly", "env_var": "INSTANTLY_KAYSE",          "key_path": "tools/accounts/kayse/instantly.md"},
     "Prosperly":     {"platform": "instantly", "env_var": "INSTANTLY_PROSPERLY",     "key_path": "tools/accounts/prospeqt/prosperly_instantly.md"},
+    "Enavra":        {"platform": "instantly", "env_var": "INSTANTLY_ENAVRA",        "key_path": "tools/accounts/enavra/instantly.md"},
 
     # EmailBison
     "RankZero":          {"platform": "emailbison", "env_var": "EMAILBISON_RANKZERO",      "key_path": "tools/accounts/rankzero/emailbison.md"},
