@@ -242,9 +242,9 @@ def fetch_instantly_data(client_name: str, api_key: str) -> dict:
     reply_rate_all   = (total_replies / total_sent * 100) if total_sent > 0 else 0.0
 
     # Count not-yet-contacted leads using the leads/list API with
-    # FILTER_VAL_NOT_CONTACTED — accurate per-campaign counts.
+    # FILTER_VAL_NOT_CONTACTED — only for ACTIVE campaigns to avoid timeouts.
     nc_by_campaign = {}
-    for c in campaigns:
+    for c in active_campaigns:
         cid = c.get("id", "")
         if cid:
             nc_by_campaign[cid] = _count_not_contacted(cid, headers)
