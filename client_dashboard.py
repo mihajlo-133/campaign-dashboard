@@ -10,6 +10,8 @@ Usage:
 """
 
 import argparse
+import hashlib
+import hmac
 import json
 import os
 import re
@@ -58,6 +60,198 @@ OPPS_PCT_WARN     = 0.5   # fraction of 7-day avg → amber if today drops below
 # Lead pool capacity thresholds are in days (not_contacted / avg_daily_sent)
 POOL_DAYS_RED     = 3     # below 3 days of leads → red
 POOL_DAYS_WARN    = 7     # below 7 days of leads → amber
+
+# Factory defaults — used as fallback when no config file or env var is present
+FACTORY_THRESHOLDS = {
+    "reply_rate_warn": REPLY_RATE_WARN,
+    "reply_rate_red":  REPLY_RATE_RED,
+    "sent_pct_warn":   SENT_PCT_WARN,
+    "sent_pct_red":    SENT_PCT_RED,
+    "bounce_rate_warn": BOUNCE_RATE_WARN,
+    "bounce_rate_red":  BOUNCE_RATE_RED,
+    "opps_pct_warn":   OPPS_PCT_WARN,
+    "pool_days_warn":  POOL_DAYS_WARN,
+    "pool_days_red":   POOL_DAYS_RED,
+}
+
+# ---------------------------------------------------------------------------
+# Config layer — load/save/resolve
+# ---------------------------------------------------------------------------
+
+_config_lock = threading.Lock()
+_config = None   # loaded lazily on first get_config() call
+
+
+def load_config() -> dict:
+    """Load config from disk → DASHBOARD_CONFIG env var → factory defaults.
+
+    Priority (highest first):
+      1. dashboard_config.json next to this script
+      2. DASHBOARD_CONFIG env var (JSON string)
+      3. Factory defaults (KPI_TARGETS + FACTORY_THRESHOLDS)
+    """
+    global _config
+
+    factory = {
+        "version": 1,
+        "updated_at": "",
+        "global_thresholds": dict(FACTORY_THRESHOLDS),
+        "clients": {name: dict(kpi) for name, kpi in KPI_TARGETS.items()},
+    }
+
+    config_path = Path(__file__).parent / "dashboard_config.json"
+    disk_loaded = False
+
+    # 1. Try disk first
+    if config_path.exists():
+        try:
+            data = json.loads(config_path.read_text(encoding="utf-8"))
+            is_valid, errors = validate_config(data)
+            if is_valid:
+                with _config_lock:
+                    _config = data
+                disk_loaded = True
+                if not os.environ.get("DASHBOARD_CONFIG"):
+                    print(
+                        "WARNING: admin config loaded from disk but DASHBOARD_CONFIG env var is not set. "
+                        "Config will be lost on next Render deploy. Use the Export button in /admin to persist."
+                    )
+                return data
+            else:
+                print(f"WARNING: dashboard_config.json failed validation ({errors}), trying env var.")
+        except Exception as e:
+            print(f"WARNING: failed to read dashboard_config.json: {e}, trying env var.")
+
+    # 2. Try DASHBOARD_CONFIG env var
+    env_json = os.environ.get("DASHBOARD_CONFIG", "")
+    if env_json:
+        try:
+            data = json.loads(env_json)
+            is_valid, errors = validate_config(data)
+            if is_valid:
+                with _config_lock:
+                    _config = data
+                return data
+            else:
+                print(f"WARNING: DASHBOARD_CONFIG env var failed validation ({errors}), using factory defaults.")
+        except Exception as e:
+            print(f"WARNING: failed to parse DASHBOARD_CONFIG env var: {e}, using factory defaults.")
+
+    # 3. Factory defaults
+    with _config_lock:
+        _config = factory
+    return factory
+
+
+def save_config(cfg: dict) -> None:
+    """Atomically write config to disk, update in-memory config, invalidate cache."""
+    global _config, _cache_ts
+    config_path = Path(__file__).parent / "dashboard_config.json"
+    tmp_path = config_path.with_suffix(".tmp")
+    import datetime as _dt
+    cfg.setdefault("version", 1)
+    cfg["updated_at"] = _dt.datetime.now(_dt.timezone.utc).isoformat()
+    data = json.dumps(cfg, indent=2)
+    tmp_path.write_text(data, encoding="utf-8")
+    tmp_path.rename(config_path)
+    with _config_lock:
+        _config = cfg
+    # Force re-classification on next request
+    with _cache_lock:
+        _cache_ts.clear()
+
+
+def get_config() -> dict:
+    """Thread-safe getter — lazy-loads config on first call."""
+    with _config_lock:
+        if _config is not None:
+            return _config
+    # Not yet loaded — load outside the lock to avoid holding it during I/O
+    return load_config()
+
+
+def get_client_kpi(name: str) -> dict:
+    """Return KPI targets for a client. Falls back to KPI_TARGETS factory if not in config."""
+    cfg = get_config()
+    client_cfg = cfg.get("clients", {}).get(name, {})
+    if client_cfg:
+        # Strip thresholds key — only return KPI fields
+        return {k: v for k, v in client_cfg.items() if k != "thresholds"}
+    return KPI_TARGETS.get(name, {})
+
+
+def get_client_thresholds(name: str) -> dict:
+    """Return resolved thresholds for a client: factory → global → per-client overrides."""
+    cfg = get_config()
+    global_t = cfg.get("global_thresholds", {})
+    client_t = cfg.get("clients", {}).get(name, {}).get("thresholds", {})
+    return {**FACTORY_THRESHOLDS, **global_t, **client_t}
+
+
+def validate_config(data: dict) -> tuple:
+    """Validate config structure and threshold consistency.
+
+    Returns (is_valid: bool, errors: list[str]).
+    """
+    errors = []
+    if not isinstance(data, dict):
+        return False, ["config must be a JSON object"]
+
+    gt = data.get("global_thresholds", {})
+    if not isinstance(gt, dict):
+        errors.append("global_thresholds must be an object")
+    else:
+        numeric_fields = [
+            "reply_rate_warn", "reply_rate_red",
+            "sent_pct_warn", "sent_pct_red",
+            "bounce_rate_warn", "bounce_rate_red",
+            "opps_pct_warn",
+            "pool_days_warn", "pool_days_red",
+        ]
+        non_numeric = set()
+        for f in numeric_fields:
+            if f in gt and not isinstance(gt[f], (int, float)):
+                errors.append(f"global_thresholds.{f} must be numeric")
+                non_numeric.add(f)
+        # Consistency checks — only run if both fields are numeric
+        if "reply_rate_warn" in gt and "reply_rate_red" in gt \
+                and not (non_numeric & {"reply_rate_warn", "reply_rate_red"}):
+            if gt["reply_rate_warn"] <= gt["reply_rate_red"]:
+                errors.append("reply_rate_warn must be > reply_rate_red")
+        if "sent_pct_warn" in gt and "sent_pct_red" in gt \
+                and not (non_numeric & {"sent_pct_warn", "sent_pct_red"}):
+            if gt["sent_pct_warn"] <= gt["sent_pct_red"]:
+                errors.append("sent_pct_warn must be > sent_pct_red")
+        if "bounce_rate_warn" in gt and "bounce_rate_red" in gt \
+                and not (non_numeric & {"bounce_rate_warn", "bounce_rate_red"}):
+            if gt["bounce_rate_warn"] >= gt["bounce_rate_red"]:
+                errors.append("bounce_rate_warn must be < bounce_rate_red")
+        if "pool_days_warn" in gt and "pool_days_red" in gt \
+                and not (non_numeric & {"pool_days_warn", "pool_days_red"}):
+            if gt["pool_days_warn"] <= gt["pool_days_red"]:
+                errors.append("pool_days_warn must be > pool_days_red")
+
+    clients = data.get("clients", {})
+    if not isinstance(clients, dict):
+        errors.append("clients must be an object")
+    else:
+        for cname, ccfg in clients.items():
+            if not isinstance(ccfg, dict):
+                errors.append(f"clients.{cname} must be an object")
+                continue
+            kpi_fields = ["sent", "not_contacted", "opps_per_day", "reply_rate"]
+            for f in kpi_fields:
+                if f in ccfg and not isinstance(ccfg[f], (int, float)):
+                    errors.append(f"clients.{cname}.{f} must be numeric")
+            cthresh = ccfg.get("thresholds", {})
+            if not isinstance(cthresh, dict):
+                errors.append(f"clients.{cname}.thresholds must be an object")
+            else:
+                for f, v in cthresh.items():
+                    if not isinstance(v, (int, float)):
+                        errors.append(f"clients.{cname}.thresholds.{f} must be numeric")
+
+    return (len(errors) == 0), errors
 
 # ---------------------------------------------------------------------------
 # Client registry
@@ -533,7 +727,8 @@ def _pool_days_remaining(data: dict, client_name: str) -> float:
 
 def _classify_client(data: dict, client_name: str) -> str:
     """Classify a client's status: 'green', 'amber', or 'red'."""
-    kpi = KPI_TARGETS.get(client_name, {})
+    kpi = get_client_kpi(client_name)
+    t = get_client_thresholds(client_name)
     sent_kpi = kpi.get("sent", 0)
 
     # No campaigns running → amber
@@ -548,31 +743,31 @@ def _classify_client(data: dict, client_name: str) -> str:
     # Sent well below KPI → red or amber
     if sent_kpi > 0:
         sent_ratio = sent_today / sent_kpi
-        if sent_ratio < SENT_PCT_RED:
+        if sent_ratio < t["sent_pct_red"]:
             return "red"
-        if sent_ratio < SENT_PCT_WARN:
+        if sent_ratio < t["sent_pct_warn"]:
             return "amber"
 
     # Reply rate (only classify if meaningful sample)
     rr = data.get("reply_rate_today", 0)
     if sent_today > 50:
-        if rr < REPLY_RATE_RED:
+        if rr < t["reply_rate_red"]:
             return "red"
-        if rr < REPLY_RATE_WARN:
+        if rr < t["reply_rate_warn"]:
             return "amber"
 
     # Bounce rate
     br = data.get("bounce_rate", 0)
-    if br > BOUNCE_RATE_RED:
+    if br > t["bounce_rate_red"]:
         return "red"
-    if br > BOUNCE_RATE_WARN:
+    if br > t["bounce_rate_warn"]:
         return "amber"
 
     # Lead pool runway (days remaining)
     pool_days = _pool_days_remaining(data, client_name)
-    if pool_days < POOL_DAYS_RED:
+    if pool_days < t["pool_days_red"]:
         return "red"
-    if pool_days < POOL_DAYS_WARN:
+    if pool_days < t["pool_days_warn"]:
         return "amber"
 
     return "green"
@@ -633,7 +828,8 @@ def _fetch_client(client_name: str) -> None:
             raise ValueError(f"Unknown platform: {cfg['platform']}")
 
         result["status"] = _classify_client(result, client_name)
-        result["kpi"]    = KPI_TARGETS.get(client_name, {})
+        result["kpi"]    = get_client_kpi(client_name)
+        result["thresholds"] = get_client_thresholds(client_name)
         result["fetched_at"] = datetime.now(timezone.utc).isoformat()
 
         # Extract backfill info before caching
@@ -703,6 +899,9 @@ def get_all_data() -> dict:
             else:
                 entry = {"error": "Loading...", "status": "loading"}
             entry["platform"] = CLIENTS[name]["platform"]
+            # Always apply current thresholds so config changes take effect
+            # immediately without waiting for the next background fetch cycle.
+            entry["thresholds"] = get_client_thresholds(name)
             result[name] = entry
     return result
 
@@ -993,16 +1192,6 @@ var _rt = null;
 var _allData = {};
 var _sortCol = 'status', _sortDir = 1;
 var _expanded = null;
-var KPI = {
-  'MyPlace':           {sent:2000, not_contacted:1000,  opps_per_day:4.0, reply_rate:1.5},
-  'SwishFunding':      {sent:10000,not_contacted:10000, opps_per_day:9.0, reply_rate:1.3},
-  'SmartMatchApp':     {sent:2000, not_contacted:2000,  opps_per_day:2.0, reply_rate:1.5},
-  'HeyReach':          {sent:2000, not_contacted:2000,  opps_per_day:2.0, reply_rate:1.5},
-  'Kayse':             {sent:2000, not_contacted:2000,  opps_per_day:2.0, reply_rate:1.5},
-  'Prosperly':         {sent:2000, not_contacted:2000,  opps_per_day:2.0, reply_rate:1.5},
-  'RankZero':          {sent:2000, not_contacted:2000,  opps_per_day:2.0, reply_rate:1.5},
-  'SwishFunding (EB)': {sent:2000, not_contacted:2000,  opps_per_day:2.0, reply_rate:1.5}
-};
 var PLAT_LOGOS={instantly:'https://instantly.ai/blog/content/images/2024/05/cleaned_rounded.png',emailbison:'https://media.licdn.com/dms/image/v2/D4E0BAQGpOS_Byh2OIw/company-logo_200_200/company-logo_200_200/0/1732486612419?e=2147483647&v=beta&t=6FgrEcbuxBgMDPbTksuPOVFkhApor1pUxpM3EJLAiOs'};
 function platLabel(p){var label=p==='instantly'?'Instantly':'EmailBison';var src=PLAT_LOGOS[p];if(!src)return label;return '<img class="plat-logo" src="'+src+'" alt="'+label+'"> '+label}
 function platIcon(p){var src=PLAT_LOGOS[p];var label=p==='instantly'?'Instantly':'EmailBison';if(!src)return '';return '<img class="plat-logo" src="'+src+'" alt="'+label+'">'}
@@ -1012,10 +1201,10 @@ function fmtDec(n,d){return n==null?'--':Number(n).toFixed(d!=null?d:1)}
 function clientStatus(d){return d.status==='loading'?'loading':d.error?'error':(d.status||'error')}
 function statusOrder(s){return s==='red'?0:s==='amber'?1:s==='green'?2:3}
 function sentCls(v,k){if(!k)return 'm';var r=v/k;return r>=0.9?'g':r>=0.7?'a':'r'}
-function rrCls(r){return r>=1.0?'g':r>=0.5?'a':'r'}
-function ncCls(nc,s,a){var rate=s>0?s:(a||0);var d=rate>0?nc/rate:Infinity;return d>=7?'g':d>=3?'a':'r'}
-function bounceCls(b){return b>5?'r':b>3?'a':'m'}
-function oppsCls(t,a){return t>=(a||0)*0.9?'g':'a'}
+function rrCls(r,t){var warn=t&&t.reply_rate_warn!=null?t.reply_rate_warn:1.0;var red=t&&t.reply_rate_red!=null?t.reply_rate_red:0.5;return r>=warn?'g':r>=red?'a':'r'}
+function ncCls(nc,s,a,t){var rate=s>0?s:(a||0);var d=rate>0?nc/rate:Infinity;var warn=t&&t.pool_days_warn!=null?t.pool_days_warn:7;var red=t&&t.pool_days_red!=null?t.pool_days_red:3;return d>=warn?'g':d>=red?'a':'r'}
+function bounceCls(b,t){var warn=t&&t.bounce_rate_warn!=null?t.bounce_rate_warn:3;var red=t&&t.bounce_rate_red!=null?t.bounce_rate_red:5;return b>red?'r':b>warn?'a':'m'}
+function oppsCls(tv,a,t){var warn=t&&t.opps_pct_warn!=null?t.opps_pct_warn:0.5;return tv>=(a||0)*warn?'g':'a'}
 function trend(t){
   if(t==='up')  return '<span class="trend trend-u">\u25b2</span>';
   if(t==='down')return '<span class="trend trend-d">\u25bc</span>';
@@ -1042,7 +1231,7 @@ function renderTable(data){
   var keys=sortedKeys(data);
   var rows='';
   keys.forEach(function(name){
-    var d=data[name],s=clientStatus(d),kpi=KPI[name]||{};
+    var d=data[name],s=clientStatus(d),kpi=d.kpi||{},t=d.thresholds||{};
     var isExp=_expanded===name;
     if(d.error){
       rows+='<tr class="err-row" data-name="'+name+'">';
@@ -1056,9 +1245,9 @@ function renderTable(data){
       rows+='<td>'+pill('error')+'</td><td></td></tr>';
       return;
     }
-    var sc=sentCls(d.sent_today||0,kpi.sent),rc=rrCls(d.reply_rate_today||0);
-    var nc=ncCls(d.not_contacted||0,d.sent_today||0,d.avg_sent_7d||0);
-    var bc=bounceCls(d.bounce_rate||0),oc=oppsCls(d.opps_today||0,d.avg_opps_7d||0);
+    var sc=sentCls(d.sent_today||0,kpi.sent),rc=rrCls(d.reply_rate_today||0,t);
+    var nc=ncCls(d.not_contacted||0,d.sent_today||0,d.avg_sent_7d||0,t);
+    var bc=bounceCls(d.bounce_rate||0,t),oc=oppsCls(d.opps_today||0,d.avg_opps_7d||0,t);
     var selCls=isExp?' selected':'';
     var expCls=isExp?' expanded':'';
     rows+='<tr data-name="'+name+'" tabindex="0" class="'+selCls+expCls+'" onclick="toggleRow(this,\''+name+'\')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();toggleRow(this,\''+name+'\')}">';
@@ -1153,23 +1342,29 @@ function toggleCampGroup(hdr,gid,evt){
   rows.forEach(function(r){isOpen?r.classList.add('visible'):r.classList.remove('visible')});
 }
 function buildAlerts(name,d){
-  var alerts=[],kpi=KPI[name]||{};
+  var alerts=[],t=d.thresholds||{};
+  var poolDaysRed=t.pool_days_red!=null?t.pool_days_red:3;
+  var poolDaysWarn=t.pool_days_warn!=null?t.pool_days_warn:7;
+  var rrRed=t.reply_rate_red!=null?t.reply_rate_red:0.5;
+  var rrWarn=t.reply_rate_warn!=null?t.reply_rate_warn:1.0;
+  var brRed=t.bounce_rate_red!=null?t.bounce_rate_red:5;
+  var brWarn=t.bounce_rate_warn!=null?t.bounce_rate_warn:3;
   var nc=d.not_contacted||0,sentToday=d.sent_today||0,avg7d=d.avg_sent_7d||0;
   var rate=sentToday>0?sentToday:avg7d,poolD=rate>0?nc/rate:Infinity;
-  if(poolD<3) alerts.push({cls:'r',msg:'Lead pool critical ('+fmtDec(poolD,1)+'d) \u2014 upload leads immediately'});
-  else if(poolD<7) alerts.push({cls:'a',msg:'Lead pool low ('+fmtDec(poolD,1)+'d) \u2014 plan lead upload soon'});
+  if(poolD<poolDaysRed) alerts.push({cls:'r',msg:'Lead pool critical ('+fmtDec(poolD,1)+'d) \u2014 upload leads immediately'});
+  else if(poolD<poolDaysWarn) alerts.push({cls:'a',msg:'Lead pool low ('+fmtDec(poolD,1)+'d) \u2014 plan lead upload soon'});
   var rr=d.reply_rate_today||0;
-  if(sentToday>50&&rr<0.5) alerts.push({cls:'r',msg:'Reply rate very low ('+fmtPct(rr)+') \u2014 check deliverability or copy'});
-  else if(sentToday>50&&rr<1.0) alerts.push({cls:'a',msg:'Reply rate below target ('+fmtPct(rr)+') \u2014 review copy or segments'});
+  if(sentToday>50&&rr<rrRed) alerts.push({cls:'r',msg:'Reply rate very low ('+fmtPct(rr)+') \u2014 check deliverability or copy'});
+  else if(sentToday>50&&rr<rrWarn) alerts.push({cls:'a',msg:'Reply rate below target ('+fmtPct(rr)+') \u2014 review copy or segments'});
   if((d.active_campaigns||0)===0&&(d.total_campaigns||0)>0) alerts.push({cls:'r',msg:'No active campaigns \u2014 check campaign status'});
   if((d.active_campaigns||0)>0&&sentToday===0) alerts.push({cls:'r',msg:'Campaigns active but nothing sent \u2014 check sending accounts'});
   var br=d.bounce_rate||0;
-  if(br>5) alerts.push({cls:'r',msg:'Bounce rate '+fmtPct(br)+' \u2014 data quality issue'});
-  else if(br>3) alerts.push({cls:'a',msg:'Bounce rate elevated ('+fmtPct(br)+') \u2014 monitor closely'});
+  if(br>brRed) alerts.push({cls:'r',msg:'Bounce rate '+fmtPct(br)+' \u2014 data quality issue'});
+  else if(br>brWarn) alerts.push({cls:'a',msg:'Bounce rate elevated ('+fmtPct(br)+') \u2014 monitor closely'});
   return alerts;
 }
 function buildExpandContent(name,d){
-  var kpi=KPI[name]||{},h='';
+  var kpi=d.kpi||{},t=d.thresholds||{},h='';
   if(d.error){return '<div class="d-alert r">'+d.error+'</div>';}
   // Row 1: KPI metric cards
   h+='<div class="exp-kpis">';
@@ -1178,22 +1373,24 @@ function buildExpandContent(name,d){
   h+='<div class="exp-kpi-sub">KPI: '+fmt(kpi.sent||0)+(sentPct!=null?' &middot; '+sentPct+'%':'')+'</div>';
   if(sentPct!=null)h+='<div class="exp-kpi-bar"><div class="exp-kpi-bar-fill '+sc+'" style="width:'+sentPct+'%"></div></div>';
   h+='</div>';
-  var ncR=ncCls(d.not_contacted||0,d.sent_today||0,d.avg_sent_7d||0);
+  var ncR=ncCls(d.not_contacted||0,d.sent_today||0,d.avg_sent_7d||0,t);
   var rate2=(d.sent_today>0?d.sent_today:(d.avg_sent_7d||0)),poolD2=rate2>0?(d.not_contacted||0)/rate2:null;
   var poolLabel=poolD2!=null?(poolD2>99?'>99d':fmtDec(poolD2,1)+'d remaining'):'-- remaining';
   h+='<div class="exp-kpi"><div class="exp-kpi-label">Lead Pool</div><div class="exp-kpi-val '+ncR+'">'+fmt(d.not_contacted)+'</div>';
   h+='<div class="exp-kpi-sub">'+poolLabel+' at current pace</div></div>';
-  var rc=rrCls(d.reply_rate_today||0),rrPct=kpi.reply_rate>0?Math.min(200,Math.round(((d.reply_rate_today||0)/kpi.reply_rate)*100)):null;
+  var rc=rrCls(d.reply_rate_today||0,t),rrPct=kpi.reply_rate>0?Math.min(200,Math.round(((d.reply_rate_today||0)/kpi.reply_rate)*100)):null;
   h+='<div class="exp-kpi"><div class="exp-kpi-label">Reply Rate</div><div class="exp-kpi-val '+rc+'">'+fmtPct(d.reply_rate_today)+'</div>';
   h+='<div class="exp-kpi-sub">Target: '+fmtPct(kpi.reply_rate||0)+(rrPct!=null?' &middot; '+rrPct+'%':'')+'</div>';
   if(rrPct!=null)h+='<div class="exp-kpi-bar"><div class="exp-kpi-bar-fill '+rc+'" style="width:'+Math.min(100,rrPct)+'%"></div></div>';
   h+='</div>';
-  var oc=oppsCls(d.opps_today||0,d.avg_opps_7d||0);
+  var oc=oppsCls(d.opps_today||0,d.avg_opps_7d||0,t);
   h+='<div class="exp-kpi"><div class="exp-kpi-label">Opportunities</div><div class="exp-kpi-val '+oc+'">'+fmt(d.opps_today)+'</div>';
   h+='<div class="exp-kpi-sub">Target: '+fmtDec(kpi.opps_per_day||0,1)+'/day &middot; 7d avg: '+fmtDec(d.avg_opps_7d,1)+'</div></div>';
-  var bc=bounceCls(d.bounce_rate||0);
+  var bc=bounceCls(d.bounce_rate||0,t);
+  var brWarnDisp=t.bounce_rate_warn!=null?t.bounce_rate_warn:3;
+  var brRedDisp=t.bounce_rate_red!=null?t.bounce_rate_red:5;
   h+='<div class="exp-kpi"><div class="exp-kpi-label">Bounce Rate</div><div class="exp-kpi-val '+bc+'">'+fmtPct(d.bounce_rate)+'</div>';
-  h+='<div class="exp-kpi-sub">Warn &gt;3% &middot; Red &gt;5%</div></div>';
+  h+='<div class="exp-kpi-sub">Warn &gt;'+brWarnDisp+'% &middot; Red &gt;'+brRedDisp+'%</div></div>';
   h+='</div>';
   // Row 2: Campaigns sub-table
   if(d.campaigns&&d.campaigns.length>0){
@@ -1267,7 +1464,7 @@ function renderCards(data){
   var keys=sortedKeys(data);
   var h='';
   keys.forEach(function(name){
-    var d=data[name],s=clientStatus(d),kpi=KPI[name]||{};
+    var d=data[name],s=clientStatus(d),kpi=d.kpi||{},t=d.thresholds||{};
     var isExp=_expanded===name;
     if(d.error){
       h+='<div class="m-card err" data-name="'+name+'">';
@@ -1277,9 +1474,9 @@ function renderCards(data){
       h+='</div>';
       return;
     }
-    var sc=sentCls(d.sent_today||0,kpi.sent),rc=rrCls(d.reply_rate_today||0);
-    var nc=ncCls(d.not_contacted||0,d.sent_today||0,d.avg_sent_7d||0);
-    var bc=bounceCls(d.bounce_rate||0);
+    var sc=sentCls(d.sent_today||0,kpi.sent),rc=rrCls(d.reply_rate_today||0,t);
+    var nc=ncCls(d.not_contacted||0,d.sent_today||0,d.avg_sent_7d||0,t);
+    var bc=bounceCls(d.bounce_rate||0,t);
     var rrMobile=(d.sent_today||0)===0?'--':fmtPct(d.reply_rate_today);
     var rrMobileCls=(d.sent_today||0)===0?'m':rc;
     h+='<div class="m-card'+(isExp?' selected expanded':'')+'" data-name="'+name+'" onclick="toggleCard(this,\''+name+'\')">';
@@ -1390,6 +1587,9 @@ _ping_log_lock = threading.Lock()
 _PING_LOG_MAX = 200
 _server_start_ts = datetime.now(timezone.utc).isoformat()
 
+# HMAC auth token bound to this server instance (invalidated on restart)
+_hmac_start_ts = str(int(time.time()))
+
 
 def _record_ping(source: str = "unknown"):
     with _ping_log_lock:
@@ -1399,6 +1599,270 @@ def _record_ping(source: str = "unknown"):
         })
         if len(_ping_log) > _PING_LOG_MAX:
             _ping_log[:] = _ping_log[-_PING_LOG_MAX:]
+
+
+# ---------------------------------------------------------------------------
+# Admin auth — HMAC cookie
+# ---------------------------------------------------------------------------
+
+def _make_token(password: str) -> str:
+    key = (password + _hmac_start_ts).encode()
+    return hmac.new(key, b"admin", hashlib.sha256).hexdigest()
+
+
+def _parse_cookie(cookie_header: str) -> dict:
+    result = {}
+    for part in cookie_header.split(";"):
+        part = part.strip()
+        if "=" in part:
+            k, _, v = part.partition("=")
+            result[k.strip()] = v.strip()
+    return result
+
+
+def _check_admin_auth(handler) -> bool:
+    password = os.environ.get("ADMIN_PASSWORD", "")
+    if not password:
+        return False
+    cookie = _parse_cookie(handler.headers.get("Cookie", "")).get("admin_token", "")
+    return hmac.compare_digest(cookie, _make_token(password))
+
+
+# ---------------------------------------------------------------------------
+# Admin HTML templates
+# ---------------------------------------------------------------------------
+
+LOGIN_HTML = """<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Admin Login</title>
+<style>
+:root{--bg:#0c0c0e;--bg-el:#161618;--bd:#2a2a2e;--tx1:#f0f0f0;--tx2:#909090;--blue:#2756f7;--red:#C33939;--sh:0 4px 12px rgba(0,0,0,.3)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--tx1);font-family:'Inter',system-ui,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh}
+.card{background:var(--bg-el);border:1px solid var(--bd);border-radius:12px;padding:32px;width:100%;max-width:360px;box-shadow:var(--sh)}
+h1{font-size:18px;font-weight:600;margin-bottom:24px}
+label{display:block;font-size:12px;color:var(--tx2);margin-bottom:6px}
+input[type=password]{width:100%;background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:10px 14px;color:var(--tx1);font-size:14px;outline:none}
+input[type=password]:focus{border-color:var(--blue)}
+button{margin-top:16px;width:100%;padding:12px;border-radius:8px;border:none;background:var(--blue);color:#fff;font-size:14px;font-weight:600;cursor:pointer}
+button:hover{opacity:.9}
+.err{color:var(--red);font-size:12px;margin-top:12px}
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>Admin Login</h1>
+  <form method="POST" action="/admin/login">
+    <label>Password</label>
+    <input type="password" name="password" autofocus>
+    <button type="submit">Sign In</button>
+    ERROR_MSG
+  </form>
+</div>
+</body>
+</html>"""
+
+ADMIN_HTML = """<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Dashboard Admin</title>
+<style>
+:root{--bg:#0c0c0e;--bg-el:#161618;--bg-hov:#1f1f22;--bd:#2a2a2e;--bd-s:#3a3a3e;--tx1:#f0f0f0;--tx2:#909090;--tx3:#7a7a7e;--blue:#2756f7;--blue-bg:rgba(39,86,247,.15);--green:#34C759;--amber:#f59e0b;--red:#C33939;--sh:0 4px 12px rgba(0,0,0,.3)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--tx1);font-family:'Inter',system-ui,sans-serif;font-size:14px;line-height:1.5;padding:24px}
+.shell{max-width:1100px;margin:0 auto}
+.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px}
+h1{font-size:18px;font-weight:600}
+.logout{font-size:12px;color:var(--tx2);text-decoration:none}
+.logout:hover{color:var(--tx1)}
+.section{background:var(--bg-el);border:1px solid var(--bd);border-radius:12px;padding:20px;margin-bottom:20px;box-shadow:var(--sh)}
+.section-title{font-size:13px;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:16px}
+table{width:100%;border-collapse:collapse}
+th{font-size:11px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;padding:8px 12px;text-align:left;border-bottom:1px solid var(--bd)}
+th.num{text-align:right}
+td{padding:8px 12px;border-bottom:1px solid var(--bd);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:nth-child(even) td{background:rgba(255,255,255,.015)}
+.td-label{color:var(--tx2);font-size:13px}
+input[type=number]{background:var(--bg);border:1px solid var(--bd);border-radius:6px;color:var(--tx1);font-size:13px;padding:5px 8px;width:90px;outline:none;text-align:right}
+input[type=number]:focus{border-color:var(--blue)}
+input[type=number].overridden{border-left:3px solid var(--blue)}
+.client-name{font-weight:500}
+.plat-badge{font-size:10px;color:var(--tx3);background:var(--bg);border:1px solid var(--bd);border-radius:4px;padding:2px 6px;margin-left:6px}
+.chevron{cursor:pointer;color:var(--tx3);font-size:11px;user-select:none;padding:2px 6px;border-radius:4px}
+.chevron:hover{background:var(--bg-hov);color:var(--tx1)}
+.override-row{display:none}
+.override-row.open{display:table-row-group}
+.override-inner{padding:12px 12px 12px 24px;background:var(--bg)}
+.override-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px}
+.override-field{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.override-label{font-size:12px;color:var(--tx2)}
+.reset-link{font-size:11px;color:var(--blue);cursor:pointer;white-space:nowrap}
+.reset-link:hover{text-decoration:underline}
+.export-area{margin-top:12px}
+textarea{width:100%;background:var(--bg);border:1px solid var(--bd);border-radius:8px;color:var(--tx1);font-size:12px;font-family:monospace;padding:12px;resize:vertical;min-height:120px;outline:none}
+.instructions{font-size:12px;color:var(--tx2);margin-bottom:8px}
+.save-bar{display:flex;align-items:center;gap:12px;margin-top:20px}
+.save-btn{padding:10px 24px;border-radius:8px;border:none;background:var(--blue);color:#fff;font-size:14px;font-weight:600;cursor:pointer}
+.save-btn:disabled{opacity:.4;cursor:not-allowed}
+.save-btn:not(:disabled):hover{opacity:.9}
+.toast{display:none;padding:8px 16px;border-radius:8px;font-size:13px}
+.toast.ok{background:rgba(52,199,89,.15);color:var(--green);border:1px solid rgba(52,199,89,.25)}
+.toast.err{background:rgba(195,57,57,.12);color:var(--red);border:1px solid rgba(195,57,57,.2)}
+</style>
+</head>
+<body>
+<div class="shell">
+<div class="topbar"><h1>Dashboard Admin</h1><a class="logout" href="/admin/logout">Sign out</a></div>
+
+<div class="section">
+<div class="section-title">Global Thresholds</div>
+<table id="gt-table">
+<thead><tr><th>Metric</th><th class="num">Warn</th><th class="num">Red</th></tr></thead>
+<tbody>
+<tr><td class="td-label">Reply Rate (%)</td><td><input type="number" step="0.1" data-gt="reply_rate_warn"></td><td><input type="number" step="0.1" data-gt="reply_rate_red"></td></tr>
+<tr><td class="td-label">Sent Volume (fraction of KPI)</td><td><input type="number" step="0.05" data-gt="sent_pct_warn"></td><td><input type="number" step="0.05" data-gt="sent_pct_red"></td></tr>
+<tr><td class="td-label">Bounce Rate (%)</td><td><input type="number" step="0.5" data-gt="bounce_rate_warn"></td><td><input type="number" step="0.5" data-gt="bounce_rate_red"></td></tr>
+<tr><td class="td-label">Lead Pool (days)</td><td><input type="number" step="1" data-gt="pool_days_warn"></td><td><input type="number" step="1" data-gt="pool_days_red"></td></tr>
+<tr><td class="td-label">Opps vs 7d Avg (fraction)</td><td><input type="number" step="0.05" data-gt="opps_pct_warn"></td><td class="td-label" style="color:var(--tx3);font-size:12px">n/a</td></tr>
+</tbody></table>
+</div>
+<div class="section">
+<div class="section-title">Client KPI Targets</div>
+<table id="kpi-table">
+<thead><tr><th>Client</th><th class="num">Sent/Day</th><th class="num">Pool Target</th><th class="num">Opps/Day</th><th class="num">Reply Rate %</th><th></th></tr></thead>
+<tbody id="kpi-tbody"></tbody>
+</table>
+</div>
+<div class="section">
+<div class="section-title">Export Config</div>
+<p class="instructions">Click Export to generate the current config. Paste into <code>DASHBOARD_CONFIG</code> in Render env vars to persist across deploys.</p>
+<button onclick="exportConfig()" style="padding:8px 16px;border-radius:6px;border:1px solid var(--bd);background:var(--bg-hov);color:var(--tx1);font-size:13px;cursor:pointer">Export Config</button>
+<div class="export-area" id="export-area" style="display:none"><textarea id="export-txt" readonly onclick="this.select()"></textarea></div>
+</div>
+<div class="save-bar">
+<button class="save-btn" id="save-btn" disabled onclick="saveConfig()">Save Changes</button>
+<div class="toast" id="toast"></div>
+</div>
+</div>
+
+<script>
+var _cfg = null, _origJson = '';
+var THRESH_KEYS = ['reply_rate_warn','reply_rate_red','sent_pct_warn','sent_pct_red','bounce_rate_warn','bounce_rate_red','pool_days_warn','pool_days_red','opps_pct_warn'];
+var THRESH_LABELS = {reply_rate_warn:'Reply Rate Warn',reply_rate_red:'Reply Rate Red',sent_pct_warn:'Sent Pct Warn',sent_pct_red:'Sent Pct Red',bounce_rate_warn:'Bounce Warn',bounce_rate_red:'Bounce Red',pool_days_warn:'Pool Days Warn',pool_days_red:'Pool Days Red',opps_pct_warn:'Opps Pct Warn'};
+
+fetch('/admin/api/config').then(function(r){return r.json();}).then(function(cfg){
+  _cfg = cfg; _origJson = JSON.stringify(cfg);
+  var gt = cfg.global_thresholds || {};
+  document.querySelectorAll('[data-gt]').forEach(function(inp){
+    var k = inp.getAttribute('data-gt');
+    if(gt[k] !== undefined) inp.value = gt[k];
+  });
+  buildKpiRows(cfg);
+  document.querySelectorAll('input').forEach(function(i){i.addEventListener('input', checkDirty);});
+});
+function buildKpiRows(cfg){
+  var clients = cfg.clients || {}, gt = cfg.global_thresholds || {};
+  var tb = document.getElementById('kpi-tbody'), html = '';
+  Object.keys(clients).forEach(function(name){
+    var c = clients[name], ct = c.thresholds || {};
+    var rowId = 'row-' + name.replace(/[^a-z0-9]/gi,'_');
+    html += '<tr>';
+    html += '<td><span class="client-name">'+name+'</span><span class="chevron" onclick="toggleOverrides(\''+rowId+'\')" id="chev-'+rowId+'">&#9654; overrides</span></td>';
+    html += '<td><input type="number" data-client="'+name+'" data-kpi="sent" value="'+(c.sent||'')+'"></td>';
+    html += '<td><input type="number" data-client="'+name+'" data-kpi="not_contacted" value="'+(c.not_contacted||'')+'"></td>';
+    html += '<td><input type="number" step="0.1" data-client="'+name+'" data-kpi="opps_per_day" value="'+(c.opps_per_day||'')+'"></td>';
+    html += '<td><input type="number" step="0.1" data-client="'+name+'" data-kpi="reply_rate" value="'+(c.reply_rate||'')+'"></td>';
+    html += '<td></td></tr>';
+    html += '<tbody class="override-row" id="'+rowId+'">';
+    html += '<tr><td colspan="6"><div class="override-inner"><div class="override-grid">';
+    THRESH_KEYS.forEach(function(k){
+      var val = ct[k] !== undefined ? ct[k] : '';
+      var gval = gt[k] !== undefined ? gt[k] : '';
+      var ovr = ct[k] !== undefined;
+      html += '<div class="override-field">';
+      html += '<span class="override-label">'+THRESH_LABELS[k]+'</span>';
+      html += '<input type="number" step="0.1" data-client="'+name+'" data-thresh="'+k+'" value="'+val+'" placeholder="'+gval+'" class="'+(ovr?'overridden':'')+'" style="width:80px">';
+      html += '<span class="reset-link" onclick="resetOverride(\''+name+'\',\''+k+'\')">Reset</span>';
+      html += '</div>';
+    });
+    html += '</div></div></td></tr></tbody>';
+  });
+  document.getElementById('kpi-tbody').innerHTML = html;
+}
+
+function toggleOverrides(rowId){
+  var el = document.getElementById(rowId);
+  var chev = document.getElementById('chev-'+rowId);
+  el.classList.toggle('open');
+  chev.innerHTML = el.classList.contains('open') ? '&#9660; overrides' : '&#9654; overrides';
+}
+function resetOverride(clientName, key){
+  var inp = document.querySelector('[data-client="'+clientName+'"][data-thresh="'+key+'"]');
+  if(inp){inp.value='';inp.classList.remove('overridden');checkDirty();}
+}
+function collectConfig(){
+  var cfg = JSON.parse(JSON.stringify(_cfg));
+  var gt = cfg.global_thresholds || {};
+  document.querySelectorAll('[data-gt]').forEach(function(inp){
+    var k = inp.getAttribute('data-gt'), v = parseFloat(inp.value);
+    if(!isNaN(v)) gt[k] = v;
+  });
+  cfg.global_thresholds = gt;
+  Object.keys(cfg.clients || {}).forEach(function(name){
+    var c = cfg.clients[name];
+    ['sent','not_contacted'].forEach(function(k){
+      var inp = document.querySelector('[data-client="'+name+'"][data-kpi="'+k+'"]');
+      if(inp && inp.value !== '') c[k] = parseInt(inp.value);
+    });
+    ['opps_per_day','reply_rate'].forEach(function(k){
+      var inp = document.querySelector('[data-client="'+name+'"][data-kpi="'+k+'"]');
+      if(inp && inp.value !== '') c[k] = parseFloat(inp.value);
+    });
+    var overrides = {};
+    THRESH_KEYS.forEach(function(k){
+      var inp = document.querySelector('[data-client="'+name+'"][data-thresh="'+k+'"]');
+      if(inp && inp.value !== '') overrides[k] = parseFloat(inp.value);
+    });
+    if(Object.keys(overrides).length) c.thresholds = overrides;
+    else delete c.thresholds;
+  });
+  return cfg;
+}
+
+function checkDirty(){
+  var cur = JSON.stringify(collectConfig());
+  document.getElementById('save-btn').disabled = (cur === _origJson);
+}
+function showToast(msg, type){
+  var t = document.getElementById('toast');
+  t.className = 'toast ' + type; t.textContent = msg; t.style.display = 'inline-block';
+  setTimeout(function(){t.style.display='none';}, 3000);
+}
+
+function saveConfig(){
+  var btn = document.getElementById('save-btn');
+  btn.textContent = 'Saving...'; btn.disabled = true;
+  var cfg = collectConfig();
+  fetch('/admin/api/config', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(cfg)})
+    .then(function(r){
+      if(r.ok){ _cfg = cfg; _origJson = JSON.stringify(cfg); btn.textContent = 'Saved \u2713'; showToast('Saved successfully','ok'); setTimeout(function(){btn.textContent='Save Changes';checkDirty();},2000); }
+      else{ return r.json().then(function(e){throw new Error((e.errors||[e.error||'Save failed']).join(', '));}); }
+    })
+    .catch(function(e){ btn.textContent = 'Save Changes'; btn.disabled = false; showToast(e.message,'err'); });
+}
+
+function exportConfig(){
+  var cfg = collectConfig();
+  document.getElementById('export-txt').value = JSON.stringify(cfg, null, 2);
+  document.getElementById('export-area').style.display = 'block';
+}
+</script>
+</body>
+</html>"""
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -1423,6 +1887,30 @@ class Handler(BaseHTTPRequestHandler):
                 "last_ping": log_copy[-1] if log_copy else None,
                 "pings": log_copy,
             })
+        elif self.path in ("/admin", "/admin/"):
+            if not os.environ.get("ADMIN_PASSWORD"):
+                self.send_response(404)
+                self.end_headers()
+                return
+            if not _check_admin_auth(self):
+                self._redirect("/admin/login")
+                return
+            self._serve_html(ADMIN_HTML)
+        elif self.path in ("/admin/login", "/admin/login?error=1"):
+            error = "error=1" in self.path
+            html = LOGIN_HTML.replace("ERROR_MSG", '<p class="err">Incorrect password.</p>' if error else "")
+            self._serve_html(html)
+        elif self.path == "/admin/logout":
+            self.send_response(302)
+            self.send_header("Set-Cookie", "admin_token=; Max-Age=0; Path=/; HttpOnly; SameSite=Strict")
+            self.send_header("Location", "/admin/login")
+            self.end_headers()
+        elif self.path == "/admin/api/config":
+            if not _check_admin_auth(self):
+                self.send_response(401)
+                self.end_headers()
+                return
+            self._serve_json(get_config())
         else:
             self._serve_html(DASHBOARD_HTML)
 
@@ -1433,13 +1921,44 @@ class Handler(BaseHTTPRequestHandler):
                 _cache_ts.clear()
             self.send_response(204)
             self.end_headers()
+        elif self.path == "/admin/login":
+            length = int(self.headers.get("Content-Length", 0))
+            body = self.rfile.read(length).decode("utf-8")
+            params = urllib.parse.parse_qs(body)
+            password = params.get("password", [""])[0]
+            expected = os.environ.get("ADMIN_PASSWORD", "")
+            if expected and hmac.compare_digest(password, expected):
+                token = _make_token(expected)
+                self.send_response(302)
+                self.send_header("Set-Cookie", f"admin_token={token}; Max-Age=28800; Path=/; HttpOnly; SameSite=Strict")
+                self.send_header("Location", "/admin")
+                self.end_headers()
+            else:
+                self._redirect("/admin/login?error=1")
+        elif self.path == "/admin/api/config":
+            if not _check_admin_auth(self):
+                self.send_response(401)
+                self.end_headers()
+                return
+            length = int(self.headers.get("Content-Length", 0))
+            try:
+                body = json.loads(self.rfile.read(length).decode("utf-8"))
+            except Exception:
+                self._serve_json({"error": "Invalid JSON"}, status=400)
+                return
+            is_valid, errors = validate_config(body)
+            if not is_valid:
+                self._serve_json({"errors": errors}, status=400)
+                return
+            save_config(body)
+            self._serve_json({"ok": True})
         else:
             self.send_response(404)
             self.end_headers()
 
-    def _serve_json(self, data: dict):
+    def _serve_json(self, data: dict, status: int = 200):
         body = json.dumps(data, default=str).encode("utf-8")
-        self.send_response(200)
+        self.send_response(status)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-cache")
@@ -1453,6 +1972,11 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
+
+    def _redirect(self, location: str):
+        self.send_response(302)
+        self.send_header("Location", location)
+        self.end_headers()
 
     def log_message(self, format, *args):
         pass  # suppress per-request logs
@@ -1468,6 +1992,8 @@ def main():
     parser.add_argument("--port", type=int, default=env_port, help=f"Port (default: {PORT})")
     parser.add_argument("--no-prefetch", action="store_true", help="Skip prefetch on startup")
     args = parser.parse_args()
+
+    load_config()
 
     if not args.no_prefetch:
         print("Pre-fetching data for all clients...")
