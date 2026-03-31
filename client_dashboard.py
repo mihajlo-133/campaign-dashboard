@@ -1046,7 +1046,7 @@ function renderTable(data){
     var isExp=_expanded===name;
     if(d.error){
       rows+='<tr class="err-row" data-name="'+name+'">';
-      rows+='<td><div class="client-name" style="color:var(--tx3)">'+name+'</div><div class="client-plat">'+platLabel(d.platform)+'</div></td>';
+      rows+='<td><div class="client-name" style="color:var(--tx3)">'+name+'</div><div class="client-plat">'+(d.platform==='instantly'?'Instantly':'EmailBison')+'</div></td>';
       rows+='<td class="col-sm-hide"><span style="font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--tx3);display:inline-flex;align-items:center;gap:4px">'+platLabel(d.platform)+'</span></td>';
       rows+='<td class="num"><span style="color:var(--tx3);font-size:12px">'+d.error+'</span></td>';
       rows+='<td class="num col-sm-hide"></td>';
@@ -1062,7 +1062,7 @@ function renderTable(data){
     var selCls=isExp?' selected':'';
     var expCls=isExp?' expanded':'';
     rows+='<tr data-name="'+name+'" tabindex="0" class="'+selCls+expCls+'" onclick="toggleRow(this,\''+name+'\')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();toggleRow(this,\''+name+'\')}">';
-    rows+='<td><div class="client-name">'+name+'</div><div class="client-plat">'+platLabel(d.platform)+'</div></td>';
+    rows+='<td><div class="client-name">'+name+'</div><div class="client-plat">'+(d.platform==='instantly'?'Instantly':'EmailBison')+'</div></td>';
     rows+='<td class="col-sm-hide"><span style="font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--tx3);display:inline-flex;align-items:center;gap:4px">'+platLabel(d.platform)+'</span></td>';
     rows+='<td class="num"><span class="cell-val '+sc+'">'+fmt(d.sent_today)+'</span>'+trend(d.sent_trend)+'</td>';
     rows+='<td class="num col-sm-hide"><span class="cell-val '+nc+'">'+fmt(d.not_contacted)+'</span></td>';
@@ -1272,7 +1272,7 @@ function renderCards(data){
     if(d.error){
       h+='<div class="m-card err" data-name="'+name+'">';
       h+='<div class="m-card-hdr"><span class="m-card-name" style="color:var(--tx3)">'+name+'</span>'+pill('error')+'</div>';
-      h+='<div class="m-card-plat">'+platLabel(d.platform)+'</div>';
+      h+='<div class="m-card-plat">'+(d.platform==='instantly'?'Instantly':'EmailBison')+'</div>';
       h+='<div class="m-card-err"><div class="m-card-err-msg">'+d.error+'</div></div>';
       h+='</div>';
       return;
@@ -1284,7 +1284,7 @@ function renderCards(data){
     var rrMobileCls=(d.sent_today||0)===0?'m':rc;
     h+='<div class="m-card'+(isExp?' selected expanded':'')+'" data-name="'+name+'" onclick="toggleCard(this,\''+name+'\')">';
     h+='<div class="m-card-hdr"><span class="m-card-name">'+name+'</span>'+pill(s)+'</div>';
-    h+='<div class="m-card-plat">'+platLabel(d.platform)+'</div>';
+    h+='<div class="m-card-plat">'+(d.platform==='instantly'?'Instantly':'EmailBison')+'</div>';
     h+='<div class="m-card-metrics">';
     h+='<div><div class="m-metric-label">Sent Today</div><div class="m-metric-val cell-val '+sc+'">'+fmt(d.sent_today)+' '+trend(d.sent_trend)+'</div></div>';
     h+='<div><div class="m-metric-label">Reply Rate</div><div class="m-metric-val cell-val '+rrMobileCls+'">'+rrMobile+'</div></div>';
