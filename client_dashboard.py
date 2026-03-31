@@ -385,6 +385,29 @@ def _paginate_instantly(url_base: str, headers: dict, limit: int = 100) -> list:
 INSTANTLY_BASE = "https://api.instantly.ai/api/v2"
 
 
+def _get_step_analytics(client_name: str, headers: dict) -> list:
+    """Fetch step analytics with separate 15-min cache."""
+    now = time.time()
+    with _step_cache_lock:
+        ts = _step_cache_ts.get(client_name, 0)
+        if (now - ts) < STEP_CACHE_TTL:
+            return list(_step_cache_data.get(client_name, []))
+
+    try:
+        steps = _http_get(f"{INSTANTLY_BASE}/campaigns/analytics/steps", headers) or []
+    except Exception:
+        steps = []
+
+    # Filter garbage rows: step is null or string "null"
+    clean_steps = [s for s in steps if s.get("step") is not None and str(s.get("step")) != "null"]
+
+    with _step_cache_lock:
+        _step_cache_data[client_name] = clean_steps
+        _step_cache_ts[client_name] = time.time()
+
+    return clean_steps
+
+
 def fetch_instantly_data(client_name: str, api_key: str) -> dict:
     """Fetch campaign analytics for a single Instantly workspace."""
     headers = {"Authorization": f"Bearer {api_key}"}
@@ -413,6 +436,19 @@ def fetch_instantly_data(client_name: str, api_key: str) -> dict:
         f"?start_date={seven_ago.isoformat()}&end_date={today.isoformat()}&limit=100"
     )
     daily_data = _http_get(daily_url, headers) or []
+
+    # 4. Step analytics (first-touch vs follow-up) — separate 15-min cache
+    steps_data = _get_step_analytics(client_name, headers)
+
+    first_touch_sent = 0
+    followup_sent = 0
+    for s in steps_data:
+        step_num = int(s.get("step", 0))
+        sent = s.get("sent", 0) or 0
+        if step_num == 0:  # Step 0 = first email (0-indexed)
+            first_touch_sent += sent
+        else:
+            followup_sent += sent
 
     # Today's numbers
     today_str = today.isoformat()
@@ -469,6 +505,10 @@ def fetch_instantly_data(client_name: str, api_key: str) -> dict:
             "bounced":   analytics_by_id.get(c.get("id"), {}).get("bounced_count", 0) or 0,
             "opps":      analytics_by_id.get(c.get("id"), {}).get("total_opportunities", 0) or 0,
             "not_contacted": nc_by_campaign.get(c.get("id", ""), 0),
+            "in_progress": max(0, (analytics_by_id.get(c.get("id"), {}).get("leads_count", 0) or 0)
+                               - (analytics_by_id.get(c.get("id"), {}).get("completed_count", 0) or 0)
+                               - (analytics_by_id.get(c.get("id"), {}).get("bounced_count", 0) or 0)
+                               - nc_by_campaign.get(c.get("id", ""), 0)),
         }
         for c in campaigns
     ]
@@ -498,6 +538,9 @@ def fetch_instantly_data(client_name: str, api_key: str) -> dict:
 
         # Derived
         "not_contacted":    not_contacted,
+        "in_progress":      max(0, total_leads - total_completed - total_bounced - not_contacted),
+        "first_touch_sent": first_touch_sent,
+        "followup_sent":    followup_sent,
         "reply_rate_today": round(reply_rate_today, 2),
         "reply_rate_7d":    round(reply_rate_7d, 2),
         "reply_rate_all":   round(reply_rate_all, 2),
@@ -684,6 +727,9 @@ def fetch_emailbison_data(client_name: str, api_key: str) -> dict:
         "avg_opps_7d":    round(avg_opps_7d, 1),
 
         "not_contacted":    not_contacted,
+        "in_progress":      None,
+        "first_touch_sent": None,
+        "followup_sent":    None,
         "reply_rate_today": round(reply_rate_today, 2),
         "reply_rate_7d":    round(reply_rate_7d, 2),
         "bounce_rate":      round(bounce_rate, 2),
@@ -782,6 +828,11 @@ _cache_data   = {}   # {client_name: {...data...}}
 _cache_ts     = {}   # {client_name: float timestamp}
 _cache_errors = {}   # {client_name: str error message}
 
+_step_cache_lock = threading.Lock()
+_step_cache_data = {}   # {client_name: list}
+_step_cache_ts   = {}   # {client_name: float}
+STEP_CACHE_TTL   = 900  # 15 minutes
+
 
 def _should_refresh(client_name: str) -> bool:
     ts = _cache_ts.get(client_name, 0)
@@ -800,11 +851,22 @@ def _backfill_nc(client_name: str, campaign_ids: list, api_key: str) -> None:
                     return
                 # Update top-level not_contacted total
                 data["not_contacted"] = data.get("not_contacted", 0) + count
-                # Update per-campaign entry
+                # Update per-campaign entry and recalculate campaign-level in_progress
                 for camp in data.get("campaigns", []):
                     if camp.get("id") == cid:
                         camp["not_contacted"] = count
+                        camp["in_progress"] = max(
+                            0,
+                            camp.get("leads", 0) - camp.get("completed", 0)
+                            - camp.get("bounced", 0) - count
+                        )
                         break
+                # Recalculate client-level in_progress
+                total_nc = sum(c.get("not_contacted", 0) for c in data.get("campaigns", []))
+                total_leads_c = sum(c.get("leads", 0) for c in data.get("campaigns", []))
+                total_completed_c = sum(c.get("completed", 0) for c in data.get("campaigns", []))
+                total_bounced_c = sum(c.get("bounced", 0) for c in data.get("campaigns", []))
+                data["in_progress"] = max(0, total_leads_c - total_completed_c - total_bounced_c - total_nc)
 
 
 def _fetch_client(client_name: str) -> None:
@@ -1771,7 +1833,7 @@ function buildKpiRows(cfg){
     var c = clients[name], ct = c.thresholds || {};
     var rowId = 'row-' + name.replace(/[^a-z0-9]/gi,'_');
     html += '<tr>';
-    html += '<td><span class="client-name">'+name+'</span><span class="chevron" onclick="toggleOverrides(\''+rowId+'\')" id="chev-'+rowId+'">&#9654; overrides</span></td>';
+    html += '<td><span class="client-name">'+name+'</span><span class="chevron" onclick="toggleOverrides(\\''+rowId+'\\')" id="chev-'+rowId+'">&#9654; overrides</span></td>';
     html += '<td><input type="number" data-client="'+name+'" data-kpi="sent" value="'+(c.sent||'')+'"></td>';
     html += '<td><input type="number" data-client="'+name+'" data-kpi="not_contacted" value="'+(c.not_contacted||'')+'"></td>';
     html += '<td><input type="number" step="0.1" data-client="'+name+'" data-kpi="opps_per_day" value="'+(c.opps_per_day||'')+'"></td>';
@@ -1786,7 +1848,7 @@ function buildKpiRows(cfg){
       html += '<div class="override-field">';
       html += '<span class="override-label">'+THRESH_LABELS[k]+'</span>';
       html += '<input type="number" step="0.1" data-client="'+name+'" data-thresh="'+k+'" value="'+val+'" placeholder="'+gval+'" class="'+(ovr?'overridden':'')+'" style="width:80px">';
-      html += '<span class="reset-link" onclick="resetOverride(\''+name+'\',\''+k+'\')">Reset</span>';
+      html += '<span class="reset-link" onclick="resetOverride(\\''+name+'\\',\\''+k+'\\')">Reset</span>';
       html += '</div>';
     });
     html += '</div></div></td></tr></tbody>';
