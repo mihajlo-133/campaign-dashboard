@@ -54,7 +54,7 @@ class TestFetchInstantlyData:
             {"date": "2026-04-01", "sent": 100, "replies": 3, "opportunities": 1},
         ]
 
-        self._patch_http(monkeypatch, campaigns=campaigns, analytics=analytics, daily=daily, nc_count=50)
+        self._patch_http(monkeypatch, campaigns=campaigns, analytics=analytics, daily=daily)
 
         result = server.fetch_instantly_data("TestClient", "fake-key")
 
@@ -64,7 +64,8 @@ class TestFetchInstantlyData:
         assert result["sent_today"] == 100
         assert result["replies_today"] == 3
         assert result["opps_today"] == 1
-        assert result["not_contacted"] == 50
+        # not_contacted = leads_count(500) - contacted_count(400) = 100
+        assert result["not_contacted"] == 100
         assert result["reply_rate_today"] == 3.0  # 3/100*100
         assert isinstance(result["campaigns"], list)
         assert len(result["campaigns"]) == 1
@@ -138,9 +139,11 @@ class TestFetchInstantlyData:
         # bounce_rate uses active only — 10/1000 = 1.0%
         assert result["bounce_rate"] == 1.0
 
-        # in_progress uses active only
-        # active_leads=400, active_completed=280, active_bounced=10, not_contacted=0
-        assert result["in_progress"] == 110  # 400 - 280 - 10 - 0
+        # in_progress = contacted - completed - bounced (active only)
+        # active contacted=300, completed=280, bounced=10
+        assert result["in_progress"] == 10  # 300 - 280 - 10
+        # not_contacted = leads - contacted (active only) = 400 - 300 = 100
+        assert result["not_contacted"] == 100
 
         # Removed active_* top-level fields
         assert "active_sent" not in result

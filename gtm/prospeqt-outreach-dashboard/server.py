@@ -380,34 +380,15 @@ def _http_post(url: str, headers: dict, body: dict, timeout: int = REQUEST_TIMEO
         return None
 
 
-def _count_not_contacted(campaign_id: str, headers: dict) -> int:
-    """Count not-yet-contacted leads for a campaign using FILTER_VAL_NOT_CONTACTED.
+def _count_not_contacted_from_analytics(analytics_entry: dict) -> int:
+    """Compute not-yet-contacted leads from analytics data.
 
-    Uses POST /api/v2/leads/list with pagination. This matches the Instantly UI
-    and is more accurate than leads_count - completed - bounced.
+    not_contacted = leads_count - contacted_count
+    This matches Instantly UI and avoids expensive paginated /leads/list calls.
     """
-    url = f"{INSTANTLY_BASE}/leads/list"
-    count = 0
-    cursor = None
-    while True:
-        body = {
-            "filter": "FILTER_VAL_NOT_CONTACTED",
-            "campaign": campaign_id,
-            "limit": 100,
-        }
-        if cursor:
-            body["starting_after"] = cursor
-        resp = _http_post(url, headers, body)
-        if not resp or not isinstance(resp, dict):
-            break
-        items = resp.get("items", [])
-        count += len(items)
-        next_cursor = resp.get("next_starting_after")
-        if not next_cursor or len(items) < 100:
-            break
-        cursor = next_cursor
-        time.sleep(0.1)
-    return count
+    leads = _safe_num(analytics_entry.get("leads_count"))
+    contacted = _safe_num(analytics_entry.get("contacted_count"))
+    return max(0, leads - contacted)
 
 
 def _paginate_instantly(url_base: str, headers: dict, limit: int = 100) -> list:
@@ -559,32 +540,27 @@ def fetch_instantly_data(client_name: str, api_key: str) -> dict:
     reply_rate_7d    = (avg_replies_7d / avg_sent_7d * 100) if avg_sent_7d > 0 else 0.0
     bounce_rate      = (active_bounced / active_sent * 100) if active_sent > 0 else 0.0
 
-    # 5. Not-yet-contacted leads per active campaign (parallel)
+    # 5. Not-yet-contacted leads per campaign (from analytics — no extra API calls)
     nc_by_campaign = {}
-    nc_threads = []
-    for c in active_campaigns:
-        cid = c.get("id", "")
-        if not cid:
-            continue
-        def _nc_worker(camp_id=cid):
-            nc_by_campaign[camp_id] = _count_not_contacted(camp_id, headers)
-        t = threading.Thread(target=_nc_worker, daemon=True)
-        t.start()
-        nc_threads.append(t)
-    for t in nc_threads:
-        t.join(timeout=REQUEST_TIMEOUT)
-    not_contacted = sum(nc_by_campaign.values())
-
-    # In-progress = active leads - completed - bounced - not_contacted
-    in_progress = max(0, active_leads - active_completed - active_bounced - not_contacted)
+    for a in analytics:
+        cid = a.get("campaign_id", "")
+        if cid:
+            nc_by_campaign[cid] = _count_not_contacted_from_analytics(a)
+    # Client-level totals: active campaigns only
+    not_contacted = sum(nc_by_campaign.get(cid, 0) for cid in active_ids if cid)
+    in_progress = sum(
+        max(0, _safe_num(a.get("leads_count")) - _safe_num(a.get("completed_count"))
+            - _safe_num(a.get("bounced_count")))
+        - nc_by_campaign.get(a.get("campaign_id", ""), 0)
+        for a in active_analytics
+    )
 
     # Trend direction: compare today vs 7d avg
     opp_trend   = _trend(opps_today, avg_opps_7d)
     reply_trend = _trend(reply_rate_today, reply_rate_7d)
     sent_trend  = _trend(sent_today, avg_sent_7d)
 
-    # Inactive campaigns for background backfill
-    inactive_campaigns = [c for c in campaigns if c.get("status") != 1 and c.get("id")]
+    # (Inactive campaigns no longer need backfill — not_contacted comes from analytics)
 
     # Build per-campaign list with today's data
     campaigns_list = []
@@ -597,6 +573,7 @@ def fetch_instantly_data(client_name: str, api_key: str) -> dict:
         leads = _safe_num(a.get("leads_count"))
         completed = _safe_num(a.get("completed_count"))
         bounced = _safe_num(a.get("bounced_count"))
+        contacted = _safe_num(a.get("contacted_count"))
         camp_sent_today = daily.get("sent", 0)
         camp_replies_today = daily.get("replies", 0)
 
@@ -611,9 +588,9 @@ def fetch_instantly_data(client_name: str, api_key: str) -> dict:
             "replies_today":  camp_replies_today,
             "opps_today":     daily.get("opps", 0),
             "reply_rate":     round(camp_replies_today / camp_sent_today * 100, 2) if camp_sent_today > 0 else 0.0,
-            # Pipeline (current state)
+            # Pipeline (current state — from analytics, no extra API calls)
             "not_contacted":  nc,
-            "in_progress":    max(0, leads - completed - bounced - nc),
+            "in_progress":    max(0, contacted - completed - bounced),
             # All-time (kept for reference)
             "total_sent":     _safe_num(a.get("emails_sent_count")),
             "total_bounced":  bounced,
@@ -664,9 +641,6 @@ def fetch_instantly_data(client_name: str, api_key: str) -> dict:
             for d in sorted(daily_data, key=lambda x: x.get("date", ""))
         ],
 
-        # Pending backfill: inactive campaign IDs needing not-contacted counts
-        "_nc_backfill": [c.get("id") for c in inactive_campaigns],
-        "_nc_api_key":  api_key,
     }
 
 
