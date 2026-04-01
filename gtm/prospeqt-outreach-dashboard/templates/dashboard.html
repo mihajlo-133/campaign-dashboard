@@ -82,7 +82,7 @@ body{background:var(--bg);color:var(--tx1);font-family:'Inter',sans-serif;line-h
 /* Table */
 .tbl-wrap{border:1px solid var(--bd);border-radius:12px;overflow:hidden;box-shadow:var(--sh);background:var(--bg-el)}
 .tbl-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
-table{width:100%;border-collapse:collapse;min-width:760px;border-spacing:0}
+table{width:100%;border-collapse:collapse;min-width:960px;border-spacing:0}
 thead tr{background:var(--bg)}
 thead th{padding:12px 16px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--tx3);text-align:left;white-space:nowrap;cursor:pointer;user-select:none;transition:color .15s;border-bottom:1px solid var(--bd);font-family:'Space Mono',monospace}
 thead th.num{text-align:right}
@@ -254,20 +254,23 @@ tr.expand-row.visible{display:table-row}
       <thead>
         <tr>
           <th data-col="name">Client</th>
-          <th class="col-sm-hide" data-col="platform">Platform</th>
-          <th class="num" data-col="sent_today" data-tip="Emails sent today across all active campaigns">Sent Today</th>
-          <th class="num col-sm-hide" data-col="pipeline" data-tip="In-progress + not yet contacted leads">Pipeline</th>
-          <th class="num col-sm-hide" data-col="reply_rate_today" data-tip="% of emails sent today that received a reply">Reply Rate</th>
-          <th class="num col-sm-hide" data-col="opps_today" data-tip="Positive replies indicating genuine interest">Opps</th>
-          <th class="num col-sm-hide" data-col="bounce_rate" data-tip="Bounce rate from active campaigns only (paused/completed excluded)">Bounce</th>
+          <th class="num" data-col="sent_today" data-tip="Emails sent today (Eastern time)">Sent</th>
+          <th class="num col-sm-hide" data-col="first_touch_today" data-tip="First-touch emails sent today">1st Touch</th>
+          <th class="num col-sm-hide" data-col="followup_today" data-tip="Follow-up emails sent today">Follow-ups</th>
+          <th class="num" data-col="reply_rate_today" data-tip="Reply rate today (active campaigns)">Reply %</th>
+          <th class="num col-sm-hide" data-col="replies_today" data-tip="Replies received today">Replies</th>
+          <th class="num col-sm-hide" data-col="opps_today" data-tip="Opportunities today">Opps</th>
+          <th class="num col-sm-hide" data-col="bounce_rate" data-tip="Bounce rate (active campaigns)">Bounce</th>
+          <th class="num col-sm-hide" data-col="not_contacted" data-tip="Leads not yet contacted">Queued</th>
+          <th class="num col-sm-hide" data-col="in_progress" data-tip="Leads in progress (contacted, not completed)">In Prog</th>
           <th data-col="status" data-tip="Overall health based on KPI thresholds">Status</th>
           <th style="width:32px"></th>
         </tr>
       </thead>
       <tbody id="tbl-body">
-        <tr><td colspan="8"><span class="skel" style="width:55%;height:14px;display:block;margin:14px 16px"></span></td></tr>
-        <tr><td colspan="8"><span class="skel" style="width:75%;height:14px;display:block;margin:14px 16px"></span></td></tr>
-        <tr><td colspan="8"><span class="skel" style="width:45%;height:14px;display:block;margin:14px 16px"></span></td></tr>
+        <tr><td colspan="12"><span class="skel" style="width:55%;height:14px;display:block;margin:14px 16px"></span></td></tr>
+        <tr><td colspan="12"><span class="skel" style="width:75%;height:14px;display:block;margin:14px 16px"></span></td></tr>
+        <tr><td colspan="12"><span class="skel" style="width:45%;height:14px;display:block;margin:14px 16px"></span></td></tr>
       </tbody>
     </table>
   </div>
@@ -310,8 +313,12 @@ function sortedKeys(data){
   keys.sort(function(a,b){
     var da=data[a],db=data[b],va,vb;
     if(_sortCol==='status'){va=statusOrder(clientStatus(da));vb=statusOrder(clientStatus(db));return _sortDir*(va-vb)}
-    if(_sortCol==='name'||_sortCol==='platform'){va=a.toLowerCase();vb=b.toLowerCase();return _sortDir*(va<vb?-1:va>vb?1:0)}
-    if(_sortCol==='pipeline'){va=(da.in_progress||0)+(da.not_contacted||0);vb=(db.in_progress||0)+(db.not_contacted||0);return _sortDir*(va-vb)}
+    if(_sortCol==='name'){va=a.toLowerCase();vb=b.toLowerCase();return _sortDir*(va<vb?-1:va>vb?1:0)}
+    if(_sortCol==='pipeline'||_sortCol==='not_contacted'){va=(da.not_contacted||0);vb=(db.not_contacted||0);return _sortDir*(va-vb)}
+    if(_sortCol==='in_progress'){va=(da.in_progress||0);vb=(db.in_progress||0);return _sortDir*(va-vb)}
+    if(_sortCol==='first_touch_today'){va=(da.first_touch_today||0);vb=(db.first_touch_today||0);return _sortDir*(va-vb)}
+    if(_sortCol==='followup_today'){va=(da.followup_today||0);vb=(db.followup_today||0);return _sortDir*(va-vb)}
+    if(_sortCol==='replies_today'){va=(da.replies_today||0);vb=(db.replies_today||0);return _sortDir*(va-vb)}
     va=da[_sortCol]||0;vb=db[_sortCol]||0;return _sortDir*(va-vb);
   });
   return keys;
@@ -324,37 +331,44 @@ function renderTable(data){
     var isExp=_expanded===name;
     if(d.error){
       rows+='<tr class="err-row" data-name="'+name+'">';
-      rows+='<td><div class="client-name" style="color:var(--tx3)">'+name+'</div><div class="client-plat">'+(d.platform==='instantly'?'Instantly':'EmailBison')+'</div></td>';
-      rows+='<td class="col-sm-hide"><span style="font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--tx3);display:inline-flex;align-items:center;gap:4px">'+platLabel(d.platform)+'</span></td>';
-      rows+='<td class="num"><span style="color:var(--tx3);font-size:12px">'+d.error+'</span></td>';
-      rows+='<td class="num col-sm-hide"></td>';
-      rows+='<td class="num col-sm-hide"></td>';
-      rows+='<td class="num col-sm-hide"></td>';
-      rows+='<td class="num col-sm-hide"></td>';
+      rows+='<td><div class="client-name" style="color:var(--tx3)">'+name+'</div></td>';
+      rows+='<td class="num" colspan="9"><span style="color:var(--tx3);font-size:12px">'+d.error+'</span></td>';
       rows+='<td>'+pill('error')+'</td><td></td></tr>';
       return;
     }
     var sc=sentCls(d.sent_today||0,kpi.sent),rc=rrCls(d.reply_rate_today||0,t);
-    var nc=ncCls(d.not_contacted||0,d.sent_today||0,d.avg_sent_7d||0,t);
     var bc=bounceCls(d.bounce_rate||0,t),oc=oppsCls(d.opps_today||0,d.avg_opps_7d||0,t);
     var selCls=isExp?' selected':'';
     var expCls=isExp?' expanded':'';
     rows+='<tr data-name="'+name+'" tabindex="0" class="'+selCls+expCls+'" onclick="toggleRow(this,\''+name+'\')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();toggleRow(this,\''+name+'\')}">';
-    rows+='<td><div class="client-name">'+name+'</div><div class="client-plat">'+(d.platform==='instantly'?'Instantly':'EmailBison')+'</div></td>';
-    rows+='<td class="col-sm-hide"><span style="font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--tx3);display:inline-flex;align-items:center;gap:4px">'+platLabel(d.platform)+'</span></td>';
+    // Client name (no platform sub-label)
+    rows+='<td><div class="client-name">'+name+'</div></td>';
+    // Sent today
     rows+='<td class="num"><span class="cell-val '+sc+'">'+fmt(d.sent_today)+'</span>'+trend(d.sent_trend)+'</td>';
-    var ipVal=d.in_progress!=null?fmt(d.in_progress):'N/A';
-    var ncVal=d.not_contacted!=null?fmt(d.not_contacted):'--';
-    rows+='<td class="num col-sm-hide"><div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;line-height:1.2"><span style="color:var(--blue);font-weight:600">'+ipVal+'</span><span style="font-size:11px;color:var(--tx3)">'+ncVal+' not contacted</span></div></td>';
+    // First touch
+    rows+='<td class="num col-sm-hide"><span class="cell-val">'+fmt(d.first_touch_today)+'</span></td>';
+    // Follow-ups
+    rows+='<td class="num col-sm-hide"><span class="cell-val">'+fmt(d.followup_today)+'</span></td>';
+    // Reply rate
     var rrDisp=(d.sent_today||0)===0?'--':fmtPct(d.reply_rate_today);
-    rows+='<td class="num col-sm-hide"><span class="cell-val '+((d.sent_today||0)===0?'m':rc)+'">'+rrDisp+'</span>'+((d.sent_today||0)>0?trend(d.reply_trend):'')+'</td>';
+    rows+='<td class="num"><span class="cell-val '+((d.sent_today||0)===0?'m':rc)+'">'+rrDisp+'</span>'+((d.sent_today||0)>0?trend(d.reply_trend):'')+'</td>';
+    // Replies
+    rows+='<td class="num col-sm-hide"><span class="cell-val">'+(d.replies_today>0?'<span style="color:#29753c">'+fmt(d.replies_today)+'</span>':fmt(d.replies_today))+'</span></td>';
+    // Opps
     rows+='<td class="num col-sm-hide"><span class="cell-val '+oc+'">'+fmt(d.opps_today)+'</span>'+trend(d.opp_trend)+'</td>';
+    // Bounce
     rows+='<td class="num col-sm-hide"><span class="cell-val '+bc+'">'+fmtPct(d.bounce_rate)+'</span></td>';
+    // Queued (not contacted)
+    rows+='<td class="num col-sm-hide"><span class="cell-val">'+fmt(d.not_contacted)+'</span></td>';
+    // In progress
+    var ipVal=d.in_progress!=null?fmt(d.in_progress):'N/A';
+    rows+='<td class="num col-sm-hide"><span class="cell-val">'+ipVal+'</span></td>';
+    // Status + chevron
     rows+='<td>'+pill(s)+'</td>';
     rows+='<td style="text-align:center"><span class="row-chevron">&#9658;</span></td>';
     rows+='</tr>';
     // Expand row (always rendered, toggled via CSS)
-    rows+='<tr class="expand-row" data-expand-for="'+name+'"><td colspan="9">';
+    rows+='<tr class="expand-row" data-expand-for="'+name+'"><td colspan="12">';
     rows+='<div class="expand-panel'+(isExp?' open':'')+'"><div class="expand-inner" id="exp-inner-'+name.replace(/[^a-zA-Z0-9]/g,'_')+'">';
     if(isExp){rows+=buildExpandContent(name,d);}
     rows+='</div></div></td></tr>';
@@ -362,18 +376,25 @@ function renderTable(data){
   document.getElementById('tbl-body').innerHTML=rows;
 }
 function renderChips(data){
-  var counts={green:0,amber:0,red:0,error:0},totalSent=0,totalOpps=0,rrSum=0,rrN=0,totalInProgress=0;
+  var counts={green:0,amber:0,red:0,error:0},totalSent=0,totalFirstTouch=0,totalFollowups=0,totalOpps=0,rrSum=0,rrN=0;
   Object.keys(data).forEach(function(k){
     var d=data[k],s=clientStatus(d);
     if(counts[s]!=null)counts[s]++;
-    if(!d.error){totalSent+=(d.sent_today||0);totalOpps+=(d.opps_today||0);if(d.reply_rate_today!=null){rrSum+=d.reply_rate_today;rrN++;}if(d.in_progress!=null)totalInProgress+=d.in_progress;}
+    if(!d.error){
+      totalSent+=(d.sent_today||0);
+      totalFirstTouch+=(d.first_touch_today||0);
+      totalFollowups+=(d.followup_today||0);
+      totalOpps+=(d.opps_today||0);
+      if(d.reply_rate_today!=null){rrSum+=d.reply_rate_today;rrN++;}
+    }
   });
   var avgRR=rrN>0?(rrSum/rrN):0;
   var h='';
   h+='<span class="chip c-blue"><strong>'+fmt(totalSent)+'</strong>&nbsp;sent today</span>';
-  h+='<span class="chip c-blue"><strong>'+fmt(totalInProgress)+'</strong>&nbsp;in progress</span>';
+  h+='<span class="chip"><strong>'+fmt(totalFirstTouch)+'</strong>&nbsp;1st touch</span>';
+  h+='<span class="chip"><strong>'+fmt(totalFollowups)+'</strong>&nbsp;follow-ups</span>';
   h+='<span class="chip c-blue"><strong>'+fmt(totalOpps)+'</strong>&nbsp;opps</span>';
-  h+='<span class="chip">Avg reply&nbsp;<strong>'+fmtPct(avgRR)+'</strong></span>';
+  h+='<span class="chip">Reply&nbsp;<strong>'+fmtPct(avgRR)+'</strong></span>';
   if(counts.red)   h+='<span class="chip c-red"><span class="dot dot-red"></span><strong>'+counts.red+'</strong>&nbsp;action needed</span>';
   if(counts.amber) h+='<span class="chip c-amber"><span class="dot dot-amber"></span><strong>'+counts.amber+'</strong>&nbsp;watch</span>';
   if(counts.green) h+='<span class="chip c-green"><span class="dot dot-green"></span><strong>'+counts.green+'</strong>&nbsp;on track</span>';
@@ -384,44 +405,47 @@ var _campGroupId=0;
 function buildCampaignRow(c){
   var isActive=c.status==='active';
   var dotCls=isActive?'camp-status-active':'camp-status-paused';
-  var rr=c.sent>0?fmtPct(c.replies/c.sent*100):'--';
+  var rr=c.reply_rate!=null?fmtPct(c.reply_rate):'--';
   var ip=c.in_progress!=null?fmt(c.in_progress):'--';
   var nc=c.not_contacted!=null?fmt(c.not_contacted):'--';
   var h='<tr>';
   h+='<td data-label="Campaign"><span class="camp-name" title="'+c.name+'">'+c.name+'</span></td>';
   h+='<td data-label="Status" style="white-space:nowrap"><span class="camp-status-dot '+dotCls+'"></span>'+(isActive?'Active':'Paused')+'</td>';
-  h+='<td data-label="Total Sent" class="num">'+fmt(c.sent)+'</td>';
-  h+='<td data-label="Pipeline" class="num" style="white-space:normal"><div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;line-height:1.2"><span style="color:var(--blue);font-weight:600;font-size:13px;font-family:\'Space Mono\',monospace">'+ip+'</span><span style="font-size:10px;color:var(--tx3)">'+nc+' not contacted</span></div></td>';
-  h+='<td data-label="Total Replies" class="num" style="color:'+(c.replies>0?'#29753c':'var(--tx3)')+'">'+fmt(c.replies)+'</td>';
-  h+='<td data-label="Total Opps" class="num" style="color:'+(c.opps>0?'#29753c':'var(--tx3)')+'">'+fmt(c.opps)+'</td>';
+  h+='<td data-label="Sent" class="num">'+fmt(c.sent_today)+'</td>';
+  h+='<td data-label="1st Touch" class="num">'+fmt(c.first_touch)+'</td>';
+  h+='<td data-label="Follow-ups" class="num">'+fmt(c.followups)+'</td>';
+  h+='<td data-label="Replies" class="num" style="color:'+(c.replies_today>0?'#29753c':'var(--tx3)')+'">'+fmt(c.replies_today)+'</td>';
+  h+='<td data-label="Opps" class="num" style="color:'+(c.opps_today>0?'#29753c':'var(--tx3)')+'">'+fmt(c.opps_today)+'</td>';
   h+='<td data-label="Reply Rate" class="num">'+rr+'</td>';
+  h+='<td data-label="Queued" class="num">'+nc+'</td>';
+  h+='<td data-label="In Prog" class="num">'+ip+'</td>';
   h+='</tr>';
   return h;
 }
 function buildCampaignTable(campaigns){
   if(!campaigns||campaigns.length===0)return '<p style="font-size:12px;color:var(--tx3);padding:8px 0">No campaign data available.</p>';
-  var bySent=function(a,b){return (b.sent||0)-(a.sent||0)};
+  var bySent=function(a,b){return (b.sent_today||0)-(a.sent_today||0)};
   var active=campaigns.filter(function(c){return c.status==='active'}).sort(bySent);
   var paused=campaigns.filter(function(c){return c.status==='paused'||c.status==='stopped'}).sort(bySent);
   var other=campaigns.filter(function(c){return c.status!=='active'&&c.status!=='paused'&&c.status!=='stopped'}).sort(bySent);
   var h='<table class="camp-table">';
-  h+='<thead><tr><th>Campaign</th><th>Status</th><th class="num">Total Sent</th><th class="num">Pipeline</th><th class="num">Total Replies</th><th class="num">Total Opps</th><th class="num">Reply Rate</th></tr></thead>';
+  h+='<thead><tr><th>Campaign</th><th>Status</th><th class="num">Sent</th><th class="num">1st Touch</th><th class="num">Follow-ups</th><th class="num">Replies</th><th class="num">Opps</th><th class="num">Reply %</th><th class="num">Queued</th><th class="num">In Prog</th></tr></thead>';
   h+='<tbody>';
   // Active campaigns: always visible
-  if(active.length===0){h+='<tr><td colspan="7" style="font-size:12px;color:var(--tx3);padding:12px">No active campaigns</td></tr>';}
+  if(active.length===0){h+='<tr><td colspan="10" style="font-size:12px;color:var(--tx3);padding:12px">No active campaigns</td></tr>';}
   active.forEach(function(c){h+=buildCampaignRow(c)});
   // Paused: collapsed group
   if(paused.length){
     var gid='cg'+(_campGroupId++);
     h+='<tr class="camp-group-hdr" onclick="toggleCampGroup(this,\''+gid+'\',event)">';
-    h+='<td colspan="7"><span class="camp-chev">&#9658;</span>Paused<span class="camp-group-count">('+paused.length+')</span></td></tr>';
+    h+='<td colspan="10"><span class="camp-chev">&#9658;</span>Paused<span class="camp-group-count">('+paused.length+')</span></td></tr>';
     paused.forEach(function(c){h+='<tr class="camp-group-row" data-group="'+gid+'">'+buildCampaignRow(c).replace(/^<tr>/,'').replace(/<\/tr>$/,'')+'</tr>'});
   }
   // Other (completed, unknown, etc.): collapsed group
   if(other.length){
     var gid2='cg'+(_campGroupId++);
     h+='<tr class="camp-group-hdr" onclick="toggleCampGroup(this,\''+gid2+'\',event)">';
-    h+='<td colspan="7"><span class="camp-chev">&#9658;</span>Other<span class="camp-group-count">('+other.length+')</span></td></tr>';
+    h+='<td colspan="10"><span class="camp-chev">&#9658;</span>Other<span class="camp-group-count">('+other.length+')</span></td></tr>';
     other.forEach(function(c){h+='<tr class="camp-group-row" data-group="'+gid2+'">'+buildCampaignRow(c).replace(/^<tr>/,'').replace(/<\/tr>$/,'')+'</tr>'});
   }
   h+='</tbody></table>';
@@ -460,54 +484,66 @@ function buildExpandContent(name,d){
   if(d.error){return '<div class="d-alert r">'+d.error+'</div>';}
   // Row 1: KPI metric cards
   h+='<div class="exp-kpis">';
+  // 1. Sent Today
   var sc=sentCls(d.sent_today||0,kpi.sent),sentPct=kpi.sent>0?Math.min(100,Math.round(((d.sent_today||0)/kpi.sent)*100)):null;
   h+='<div class="exp-kpi"><div class="exp-kpi-label">Sent Today</div><div class="exp-kpi-val '+sc+'">'+fmt(d.sent_today)+'</div>';
   h+='<div class="exp-kpi-sub">KPI: '+fmt(kpi.sent||0)+(sentPct!=null?' &middot; '+sentPct+'%':'')+'</div>';
   if(sentPct!=null)h+='<div class="exp-kpi-bar"><div class="exp-kpi-bar-fill '+sc+'" style="width:'+sentPct+'%"></div></div>';
   h+='</div>';
-  var ncR=ncCls(d.not_contacted||0,d.sent_today||0,d.avg_sent_7d||0,t);
-  var rate2=(d.sent_today>0?d.sent_today:(d.avg_sent_7d||0)),poolD2=rate2>0?(d.not_contacted||0)/rate2:null;
-  var poolDaysLabel=poolD2!=null?(poolD2>99?'>99d runway':fmtDec(poolD2,1)+'d runway'):'queued';
-  var totalLeads=(d.total_leads!=null)?d.total_leads:((d.in_progress||0)+(d.not_contacted||0)+(d.sent||d.sent_today||0));
-  var ipExp=d.in_progress!=null?fmt(d.in_progress):'N/A';
-  var isInstantly=d.platform==='instantly';
-  h+='<div class="exp-kpi" style="flex:2;min-width:340px">';
-  h+='<div class="exp-kpi-label">Pipeline</div>';
-  h+='<div style="display:flex;gap:16px;margin-bottom:8px;flex-wrap:nowrap;align-items:flex-start">';
-  h+='<div style="flex:1;min-width:90px"><div class="exp-kpi-val" style="font-size:20px">'+fmt(d.not_contacted!=null?(d.not_contacted+(d.in_progress||0)):null)+'</div><div class="exp-kpi-sub">active pool</div></div>';
-  h+='<div style="flex:1;min-width:90px"><div class="exp-kpi-val" style="font-size:20px;color:var(--blue)">'+ipExp+'</div><div class="exp-kpi-sub">in progress</div></div>';
-  var runwayColor=poolD2!=null&&poolD2<3?'color:var(--amber)':'color:var(--tx3)';
-  h+='<div style="flex:1;min-width:90px"><div class="exp-kpi-val '+ncR+'" style="font-size:20px">'+fmt(d.not_contacted)+'</div><div class="exp-kpi-sub">Not contacted</div><div class="exp-kpi-sub" style="margin-top:2px;'+runwayColor+'">'+poolDaysLabel+'</div></div>';
+  // 2. First Touch / Follow-ups split card
+  var ftVal=d.first_touch_today!=null?fmt(d.first_touch_today):'--';
+  var fuVal=d.followup_today!=null?fmt(d.followup_today):'--';
+  var totalSteps=(d.first_touch_today||0)+(d.followup_today||0);
+  var ftPct2=totalSteps>0?Math.round(((d.first_touch_today||0)/totalSteps)*100):50;
+  var fuPct2=totalSteps>0?(100-ftPct2):50;
+  h+='<div class="exp-kpi" style="flex:1.5;min-width:180px"><div class="exp-kpi-label">1st Touch / Follow-ups</div>';
+  h+='<div style="display:flex;gap:16px;align-items:flex-start;margin-bottom:8px">';
+  h+='<div><div class="exp-kpi-val" style="font-size:22px">'+ftVal+'</div><div class="exp-kpi-sub">1st touch</div></div>';
+  h+='<div style="font-size:18px;color:var(--tx3);padding-top:4px">/</div>';
+  h+='<div><div class="exp-kpi-val" style="font-size:22px">'+fuVal+'</div><div class="exp-kpi-sub">follow-ups</div></div>';
   h+='</div>';
-  if(isInstantly&&d.first_touch_sent!=null&&d.followup_sent!=null){
-    var totalSteps=(d.first_touch_sent||0)+(d.followup_sent||0);
-    var ftPct=totalSteps>0?Math.round((d.first_touch_sent/totalSteps)*100):0;
-    var fuPct=totalSteps>0?(100-ftPct):0;
-    h+='<div style="height:6px;border-radius:3px;overflow:hidden;display:flex;background:var(--bd);margin-top:4px">';
-    h+='<div style="width:'+ftPct+'%;background:#2756f7;transition:width .3s"></div>';
+  if(totalSteps>0){
+    h+='<div style="height:4px;border-radius:2px;overflow:hidden;display:flex;background:var(--bd)">';
+    h+='<div style="width:'+ftPct2+'%;background:#2756f7;transition:width .3s"></div>';
     h+='<div style="flex:1;background:#7C9EFA"></div>';
     h+='</div>';
-    h+='<div style="display:flex;justify-content:space-between;margin-top:6px;font-size:10px;color:var(--tx3);font-family:\'Space Mono\',monospace;gap:16px">';
-    h+='<span>First touch: '+fmt(d.first_touch_sent)+' ('+ftPct+'%)</span>';
-    h+='<span style="text-align:right">Follow-up: '+fmt(d.followup_sent)+' ('+fuPct+'%) &middot; active campaigns</span>';
+    h+='<div style="display:flex;justify-content:space-between;margin-top:5px;font-size:10px;color:var(--tx3);font-family:\'Space Mono\',monospace">';
+    h+='<span>'+ftPct2+'% 1st touch</span><span>'+fuPct2+'% follow-up</span>';
     h+='</div>';
-  } else if(!isInstantly){
-    h+='<div style="font-size:11px;color:var(--tx3);margin-top:4px">Step analytics not available</div>';
   }
   h+='</div>';
+  // 3. Reply Rate
   var rc=rrCls(d.reply_rate_today||0,t),rrPct=kpi.reply_rate>0?Math.min(200,Math.round(((d.reply_rate_today||0)/kpi.reply_rate)*100)):null;
-  h+='<div class="exp-kpi"><div class="exp-kpi-label">Reply Rate</div><div class="exp-kpi-val '+rc+'">'+fmtPct(d.reply_rate_today)+'</div>';
+  h+='<div class="exp-kpi"><div class="exp-kpi-label">Reply Rate</div><div class="exp-kpi-val '+rc+'">'+(d.sent_today>0?fmtPct(d.reply_rate_today):'--')+'</div>';
   h+='<div class="exp-kpi-sub">Target: '+fmtPct(kpi.reply_rate||0)+(rrPct!=null?' &middot; '+rrPct+'%':'')+'</div>';
   if(rrPct!=null)h+='<div class="exp-kpi-bar"><div class="exp-kpi-bar-fill '+rc+'" style="width:'+Math.min(100,rrPct)+'%"></div></div>';
   h+='</div>';
+  // 4. Replies
+  h+='<div class="exp-kpi"><div class="exp-kpi-label">Replies</div>';
+  h+='<div class="exp-kpi-val" style="'+(d.replies_today>0?'color:#29753c':'')+'">'+fmt(d.replies_today)+'</div>';
+  h+='<div class="exp-kpi-sub">7d avg: '+fmtDec(d.avg_replies_7d,1)+'</div></div>';
+  // 5. Opportunities
   var oc=oppsCls(d.opps_today||0,d.avg_opps_7d||0,t);
   h+='<div class="exp-kpi"><div class="exp-kpi-label">Opportunities</div><div class="exp-kpi-val '+oc+'">'+fmt(d.opps_today)+'</div>';
   h+='<div class="exp-kpi-sub">Target: '+fmtDec(kpi.opps_per_day||0,1)+'/day &middot; 7d avg: '+fmtDec(d.avg_opps_7d,1)+'</div></div>';
+  // 6. Bounce Rate
   var bc=bounceCls(d.bounce_rate||0,t);
   var brWarnDisp=t.bounce_rate_warn!=null?t.bounce_rate_warn:3;
   var brRedDisp=t.bounce_rate_red!=null?t.bounce_rate_red:5;
   h+='<div class="exp-kpi"><div class="exp-kpi-label">Bounce Rate</div><div class="exp-kpi-val '+bc+'">'+fmtPct(d.bounce_rate)+'</div>';
   h+='<div class="exp-kpi-sub">Active campaigns &middot; Warn &gt;'+brWarnDisp+'% &middot; Red &gt;'+brRedDisp+'%</div></div>';
+  h+='</div>';
+  // Row 2: Pipeline
+  h+='<div class="exp-kpis">';
+  var ncR=ncCls(d.not_contacted||0,d.sent_today||0,d.avg_sent_7d||0,t);
+  var rate2=(d.sent_today>0?d.sent_today:(d.avg_sent_7d||0)),poolD2=rate2>0?(d.not_contacted||0)/rate2:null;
+  var poolDaysLabel=poolD2!=null?(poolD2>99?'>99d runway':fmtDec(poolD2,1)+'d runway'):'--';
+  var runwayColor=poolD2!=null&&poolD2<3?'color:var(--amber)':'color:var(--tx3)';
+  h+='<div class="exp-kpi"><div class="exp-kpi-label">Not Contacted</div><div class="exp-kpi-val '+ncR+'">'+fmt(d.not_contacted)+'</div>';
+  h+='<div class="exp-kpi-sub" style="'+runwayColor+'">'+poolDaysLabel+'</div></div>';
+  var ipExp=d.in_progress!=null?fmt(d.in_progress):'N/A';
+  h+='<div class="exp-kpi"><div class="exp-kpi-label">In Progress</div><div class="exp-kpi-val" style="color:var(--blue)">'+ipExp+'</div>';
+  h+='<div class="exp-kpi-sub">contacted, not completed</div></div>';
   h+='</div>';
   // Row 2: Campaigns sub-table
   if(d.campaigns&&d.campaigns.length>0){
@@ -586,28 +622,25 @@ function renderCards(data){
     if(d.error){
       h+='<div class="m-card err" data-name="'+name+'">';
       h+='<div class="m-card-hdr"><span class="m-card-name" style="color:var(--tx3)">'+name+'</span>'+pill('error')+'</div>';
-      h+='<div class="m-card-plat">'+(d.platform==='instantly'?'Instantly':'EmailBison')+'</div>';
       h+='<div class="m-card-err"><div class="m-card-err-msg">'+d.error+'</div></div>';
       h+='</div>';
       return;
     }
     var sc=sentCls(d.sent_today||0,kpi.sent),rc=rrCls(d.reply_rate_today||0,t);
-    var nc=ncCls(d.not_contacted||0,d.sent_today||0,d.avg_sent_7d||0,t);
-    var bc=bounceCls(d.bounce_rate||0,t);
+    var bc=bounceCls(d.bounce_rate||0,t),oc=oppsCls(d.opps_today||0,d.avg_opps_7d||0,t);
     var rrMobile=(d.sent_today||0)===0?'--':fmtPct(d.reply_rate_today);
     var rrMobileCls=(d.sent_today||0)===0?'m':rc;
     h+='<div class="m-card'+(isExp?' selected expanded':'')+'" data-name="'+name+'" onclick="toggleCard(this,\''+name+'\')">';
     h+='<div class="m-card-hdr"><span class="m-card-name">'+name+'</span>'+pill(s)+'</div>';
-    h+='<div class="m-card-plat">'+(d.platform==='instantly'?'Instantly':'EmailBison')+'</div>';
     h+='<div class="m-card-metrics">';
     h+='<div><div class="m-metric-label">Sent Today</div><div class="m-metric-val cell-val '+sc+'">'+fmt(d.sent_today)+' '+trend(d.sent_trend)+'</div></div>';
     h+='<div><div class="m-metric-label">Reply Rate</div><div class="m-metric-val cell-val '+rrMobileCls+'">'+rrMobile+'</div></div>';
-    h+='<div><div class="m-metric-label">Leads Left</div><div class="m-metric-val cell-val '+nc+'">'+fmt(d.not_contacted)+'</div></div>';
-    h+='<div><div class="m-metric-label">Bounce</div><div class="m-metric-val cell-val '+bc+'">'+fmtPct(d.bounce_rate)+'</div></div>';
+    h+='<div><div class="m-metric-label">Replies</div><div class="m-metric-val" style="'+(d.replies_today>0?'color:#29753c':'')+'">'+fmt(d.replies_today)+'</div></div>';
+    h+='<div><div class="m-metric-label">Opps</div><div class="m-metric-val cell-val '+oc+'">'+fmt(d.opps_today)+'</div></div>';
     h+='</div>';
     var mipVal=d.in_progress!=null?fmt(d.in_progress):'N/A';
     var mncVal=d.not_contacted!=null?fmt(d.not_contacted):'--';
-    h+='<div style="font-size:12px;color:var(--tx2);margin-top:10px;padding-top:10px;border-top:1px solid var(--bd)">Pipeline: <span style="color:var(--blue);font-weight:600">'+mipVal+'</span> in progress &middot; <span style="color:var(--tx3)">'+mncVal+'</span> not contacted</div>';
+    h+='<div style="font-size:12px;color:var(--tx2);margin-top:10px;padding-top:10px;border-top:1px solid var(--bd)">Pipeline: <span style="color:var(--tx3)">'+mncVal+'</span> queued &middot; <span style="color:var(--blue);font-weight:600">'+mipVal+'</span> in progress</div>';
     // Inline expand detail
     h+='<div class="m-card-detail">';
     if(isExp){h+=buildExpandContent(name,d);}

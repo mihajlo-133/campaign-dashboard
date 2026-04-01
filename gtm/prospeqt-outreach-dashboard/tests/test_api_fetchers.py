@@ -6,18 +6,20 @@ import server
 class TestFetchInstantlyData:
     """Test Instantly fetcher with monkeypatched HTTP calls."""
 
-    def _patch_http(self, monkeypatch, campaigns=None, analytics=None, daily=None, steps=None, nc_count=0):
+    def _patch_http(self, monkeypatch, campaigns=None, analytics=None, daily=None, campaign_daily=None, nc_count=0):
         """Set up monkeypatched HTTP responses for Instantly API."""
         campaigns = campaigns or []
         analytics = analytics or []
         daily = daily or []
-        steps = steps or []
+        campaign_daily = campaign_daily or {}
 
         def mock_http_get(url, headers, timeout=15):
             if "/campaigns/analytics/daily" in url:
+                # Per-campaign daily endpoint: /campaigns/{id}/analytics/daily
+                for camp_id, data in campaign_daily.items():
+                    if f"/{camp_id}/" in url:
+                        return data
                 return daily
-            if "/campaigns/analytics/steps" in url:
-                return steps
             if "/campaigns/analytics" in url:
                 return analytics
             if "/campaigns" in url:
@@ -31,8 +33,6 @@ class TestFetchInstantlyData:
 
         monkeypatch.setattr(server, "_http_get", mock_http_get)
         monkeypatch.setattr(server, "_http_post", mock_http_post)
-        # Disable step cache so our mock is always hit
-        monkeypatch.setattr(server, "STEP_CACHE_TTL", 0)
 
     def test_basic_parsing(self, monkeypatch):
         campaigns = [
@@ -64,13 +64,29 @@ class TestFetchInstantlyData:
         assert result["sent_today"] == 100
         assert result["replies_today"] == 3
         assert result["opps_today"] == 1
-        assert result["total_sent"] == 1000
-        assert result["total_replies"] == 20
-        assert result["total_opps"] == 5
         assert result["not_contacted"] == 50
         assert result["reply_rate_today"] == 3.0  # 3/100*100
         assert isinstance(result["campaigns"], list)
         assert len(result["campaigns"]) == 1
+
+        # New fields present
+        assert "first_touch_today" in result
+        assert "followup_today" in result
+        assert "reply_rate_7d" in result
+        assert "bounce_rate" in result
+        assert "in_progress" in result
+
+        # Removed fields absent
+        assert "total_sent" not in result
+        assert "total_replies" not in result
+        assert "total_opps" not in result
+        assert "first_touch_sent" not in result
+        assert "followup_sent" not in result
+        assert "reply_rate_all" not in result
+        assert "active_sent" not in result
+        assert "active_replies" not in result
+        assert "active_bounced" not in result
+        assert "active_opps" not in result
 
     def test_empty_responses(self, monkeypatch):
         self._patch_http(monkeypatch)
@@ -83,24 +99,8 @@ class TestFetchInstantlyData:
         assert result["reply_rate_today"] == 0.0
         assert result["campaigns"] == []
 
-    def test_step_analytics_parsing(self, monkeypatch):
-        campaigns = [{"id": "c1", "name": "Camp A", "status": 1}]
-        analytics = [{"campaign_id": "c1", "emails_sent_count": 500, "reply_count": 10, "total_opportunities": 2, "leads_count": 200, "contacted_count": 150, "bounced_count": 5, "completed_count": 140}]
-        steps = [
-            {"step": 0, "sent": 300},
-            {"step": 1, "sent": 150},
-            {"step": 2, "sent": 50},
-            {"step": None, "sent": 999},  # garbage row — should be filtered
-        ]
-
-        self._patch_http(monkeypatch, campaigns=campaigns, analytics=analytics, steps=steps)
-
-        result = server.fetch_instantly_data("TestClient", "fake-key")
-        assert result["first_touch_sent"] == 300
-        assert result["followup_sent"] == 200  # 150 + 50
-
     def test_active_campaign_filtering(self, monkeypatch):
-        """active_* fields use only active campaigns; paused campaigns excluded from rates."""
+        """Bounce rate uses only active campaigns; paused campaigns excluded."""
         campaigns = [
             {"id": "active1", "name": "Active Camp", "status": 1},
             {"id": "paused1", "name": "Paused Camp", "status": 3},
@@ -132,25 +132,75 @@ class TestFetchInstantlyData:
 
         result = server.fetch_instantly_data("TestClient", "fake-key")
 
-        # active_* fields should reflect only the active campaign
-        assert result["active_sent"] == 1000
-        assert result["active_replies"] == 20
-        assert result["active_bounced"] == 10
-        assert result["active_opps"] == 5
-
-        # total_* fields should include both campaigns (backward compat)
-        assert result["total_sent"] == 6000
-        assert result["total_replies"] == 30
+        # active_campaigns count should reflect only active (status=1)
+        assert result["active_campaigns"] == 1
 
         # bounce_rate uses active only — 10/1000 = 1.0%
         assert result["bounce_rate"] == 1.0
 
-        # reply_rate_all uses active only — 20/1000 = 2.0%
-        assert result["reply_rate_all"] == 2.0
-
         # in_progress uses active only
         # active_leads=400, active_completed=280, active_bounced=10, not_contacted=0
         assert result["in_progress"] == 110  # 400 - 280 - 10 - 0
+
+        # Removed active_* top-level fields
+        assert "active_sent" not in result
+        assert "active_replies" not in result
+        assert "active_bounced" not in result
+        assert "active_opps" not in result
+        assert "reply_rate_all" not in result
+
+    def test_per_campaign_daily_data(self, monkeypatch):
+        """Per-campaign sent_today, first_touch, followups are populated."""
+        campaigns = [
+            {"id": "c1", "name": "Camp A", "status": 1},
+            {"id": "c2", "name": "Camp B", "status": 1},
+        ]
+        analytics = [
+            {"campaign_id": "c1", "emails_sent_count": 500, "reply_count": 10, "total_opportunities": 2, "leads_count": 200, "contacted_count": 150, "bounced_count": 5, "completed_count": 140},
+            {"campaign_id": "c2", "emails_sent_count": 300, "reply_count": 6, "total_opportunities": 1, "leads_count": 120, "contacted_count": 90, "bounced_count": 3, "completed_count": 85},
+        ]
+        # Aggregate daily (used for sent_today totals)
+        daily = [
+            {"date": "2026-04-01", "sent": 80, "replies": 4, "opportunities": 1},
+        ]
+        # Per-campaign daily breakdowns (first_touch = step 0, followups = steps 1+)
+        campaign_daily = {
+            "c1": [{"date": "2026-04-01", "step": 0, "sent": 30}, {"date": "2026-04-01", "step": 1, "sent": 20}],
+            "c2": [{"date": "2026-04-01", "step": 0, "sent": 20}, {"date": "2026-04-01", "step": 1, "sent": 10}],
+        }
+
+        self._patch_http(monkeypatch, campaigns=campaigns, analytics=analytics, daily=daily, campaign_daily=campaign_daily)
+
+        result = server.fetch_instantly_data("TestClient", "fake-key")
+
+        # Campaigns list should exist
+        assert isinstance(result["campaigns"], list)
+        assert len(result["campaigns"]) == 2
+
+        # Each campaign should have the new fields
+        for camp in result["campaigns"]:
+            assert "sent_today" in camp
+            assert "first_touch" in camp
+            assert "followups" in camp
+            assert "replies_today" in camp
+            assert "opps_today" in camp
+            assert "reply_rate" in camp
+            assert "not_contacted" in camp
+            assert "in_progress" in camp
+            assert "total_sent" in camp
+            assert "total_bounced" in camp
+
+            # Old fields removed from campaigns
+            assert "sent" not in camp
+            assert "replies" not in camp
+            assert "leads" not in camp
+            assert "completed" not in camp
+            assert "bounced" not in camp
+            assert "opps" not in camp
+
+        # first_touch_today and followup_today aggregated at client level
+        assert "first_touch_today" in result
+        assert "followup_today" in result
 
 
 class TestFetchEmailBisonData:
@@ -216,6 +266,23 @@ class TestFetchEmailBisonData:
         assert result["not_contacted"] == 200
         assert isinstance(result["campaigns"], list)
 
+        # EmailBison has first_touch_today and followup_today as 0
+        assert result["first_touch_today"] == 0
+        assert result["followup_today"] == 0
+
+        # New fields present
+        assert "reply_rate_today" in result
+        assert "reply_rate_7d" in result
+        assert "bounce_rate" in result
+        assert "in_progress" in result
+
+        # Removed fields absent
+        assert "first_touch_sent" not in result
+        assert "followup_sent" not in result
+        assert "reply_rate_all" not in result
+        assert "active_sent" not in result
+        assert "opps_7d_total" not in result
+
     def test_empty_responses(self, monkeypatch):
         self._patch_http(monkeypatch)
 
@@ -239,6 +306,39 @@ class TestFetchEmailBisonData:
         result = server.fetch_emailbison_data("TestClient", "fake-key")
         assert result["platform"] == "emailbison"
         assert result["sent_today"] == 0
+
+    def test_campaign_fields_new_structure(self, monkeypatch):
+        """EmailBison campaign entries use new field names."""
+        campaigns = [
+            {"id": 1, "name": "EB Camp A", "status": "Active"},
+            {"id": 2, "name": "EB Camp B", "status": "Active"},
+        ]
+        stats_today = [
+            {"label": "Sent", "dates": [["2026-04-01", 80]]},
+            {"label": "Replied", "dates": [["2026-04-01", 3]]},
+            {"label": "Interested", "dates": [["2026-04-01", 1]]},
+        ]
+
+        self._patch_http(monkeypatch, campaigns=campaigns, stats_today=stats_today, nc_total=500)
+
+        result = server.fetch_emailbison_data("TestClient", "fake-key")
+
+        assert isinstance(result["campaigns"], list)
+        for camp in result["campaigns"]:
+            assert "sent_today" in camp
+            assert "replies_today" in camp
+            assert "opps_today" in camp
+            assert "reply_rate" in camp
+            assert "total_sent" in camp
+            assert "total_bounced" in camp
+            assert "first_touch" in camp
+            assert "followups" in camp
+
+            # Old fields removed
+            assert "sent" not in camp
+            assert "replies" not in camp
+            assert "bounced" not in camp
+            assert "opps" not in camp
 
 
 class TestEbParseEventsTimeseries:

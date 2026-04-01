@@ -23,6 +23,10 @@ import urllib.parse
 from datetime import datetime, timedelta, timezone
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from pathlib import Path
+from zoneinfo import ZoneInfo
+
+# Campaign analytics use Eastern Time (auto-adjusts for EST/EDT)
+EASTERN = ZoneInfo("America/New_York")
 
 # ---------------------------------------------------------------------------
 # Constants — edit these to change behavior
@@ -456,177 +460,205 @@ def _get_step_analytics(client_name: str, headers: dict) -> list:
     return clean_steps
 
 
+def _fetch_campaign_daily(campaign_id: str, date_str: str, headers: dict) -> dict:
+    """Fetch daily analytics for a single campaign on a specific date.
+
+    Returns: {sent, first_touch, followups, replies, opps} for that day.
+    """
+    url = (
+        f"{INSTANTLY_BASE}/campaigns/analytics/daily"
+        f"?campaign_id={campaign_id}&start_date={date_str}&end_date={date_str}"
+        f"&include_opportunities_count=true&limit=10"
+    )
+    try:
+        data = _http_get(url, headers) or []
+    except Exception:
+        data = []
+    row = next((d for d in data if d.get("date") == date_str), {}) if data else {}
+    sent = _safe_num(row.get("sent"))
+    first_touch = _safe_num(row.get("new_leads_contacted"))
+    return {
+        "sent": sent,
+        "first_touch": first_touch,
+        "followups": max(0, sent - first_touch),
+        "replies": _safe_num(row.get("replies")),
+        "opps": _safe_num(row.get("opportunities")),
+    }
+
+
 def fetch_instantly_data(client_name: str, api_key: str) -> dict:
     """Fetch campaign analytics for a single Instantly workspace."""
     headers = {"Authorization": f"Bearer {api_key}"}
 
-    today = datetime.now(timezone.utc).date()
+    today = datetime.now(EASTERN).date()
     seven_ago = today - timedelta(days=7)
+    today_str = today.isoformat()
 
     # 1. Campaigns list (for status/active count)
     campaigns = _paginate_instantly(f"{INSTANTLY_BASE}/campaigns", headers)
     active_campaigns = [c for c in campaigns if c.get("status") == 1]
     active_ids = {c.get("id") for c in active_campaigns}
 
-    # 2. All-time analytics (totals for reply rate, opps)
+    # 2. All-time analytics per campaign (for lead counts, bounce, pipeline)
     analytics = _paginate_instantly(f"{INSTANTLY_BASE}/campaigns/analytics", headers)
+    analytics_by_id = {a.get("campaign_id"): a for a in analytics if a.get("campaign_id")}
 
-    # Aggregate totals — _safe_num handles '\\N' and other non-numeric API values
-    total_sent      = sum(_safe_num(c.get("emails_sent_count")) for c in analytics)
-    total_replies   = sum(_safe_num(c.get("reply_count")) for c in analytics)
-    total_opps      = sum(_safe_num(c.get("total_opportunities")) for c in analytics)
-    total_leads     = sum(_safe_num(c.get("leads_count")) for c in analytics)
-    total_contacted = sum(_safe_num(c.get("contacted_count")) for c in analytics)
-    total_bounced   = sum(_safe_num(c.get("bounced_count")) for c in analytics)
-
-    # Active-campaign-only metrics (exclude paused/completed campaigns)
+    # Active-campaign-only all-time metrics
     active_analytics = [a for a in analytics if a.get("campaign_id") in active_ids]
     active_sent      = sum(_safe_num(c.get("emails_sent_count")) for c in active_analytics)
-    active_replies   = sum(_safe_num(c.get("reply_count")) for c in active_analytics)
     active_bounced   = sum(_safe_num(c.get("bounced_count")) for c in active_analytics)
-    active_opps      = sum(_safe_num(c.get("total_opportunities")) for c in active_analytics)
     active_leads     = sum(_safe_num(c.get("leads_count")) for c in active_analytics)
     active_completed = sum(_safe_num(c.get("completed_count")) for c in active_analytics)
 
-    # 3. Daily analytics (last 7 days) for trends and today's numbers
+    # 3. Per-campaign daily analytics for TODAY (active campaigns only)
+    # Fetch in parallel — one API call per active campaign
+    daily_by_campaign = {}
+    daily_threads = []
+    for c in active_campaigns:
+        cid = c.get("id", "")
+        if not cid:
+            continue
+        def _worker(camp_id=cid):
+            daily_by_campaign[camp_id] = _fetch_campaign_daily(camp_id, today_str, headers)
+        t = threading.Thread(target=_worker, daemon=True)
+        t.start()
+        daily_threads.append(t)
+    for t in daily_threads:
+        t.join(timeout=REQUEST_TIMEOUT)
+
+    # Aggregate today's numbers from per-campaign daily data
+    sent_today = sum(d.get("sent", 0) for d in daily_by_campaign.values())
+    first_touch_today = sum(d.get("first_touch", 0) for d in daily_by_campaign.values())
+    followup_today = sum(d.get("followups", 0) for d in daily_by_campaign.values())
+    replies_today = sum(d.get("replies", 0) for d in daily_by_campaign.values())
+    opps_today = sum(d.get("opps", 0) for d in daily_by_campaign.values())
+
+    # 4. Workspace-wide daily analytics (last 7 days) for trends
     daily_url = (
         f"{INSTANTLY_BASE}/campaigns/analytics/daily"
-        f"?start_date={seven_ago.isoformat()}&end_date={today.isoformat()}&limit=100"
+        f"?start_date={seven_ago.isoformat()}&end_date={today_str}"
+        f"&include_opportunities_count=true&limit=100"
     )
-    daily_data = _http_get(daily_url, headers) or []
-
-    # 4. Step analytics (first-touch vs follow-up) — separate 15-min cache
-    steps_data = _get_step_analytics(client_name, headers)
-
-    first_touch_sent = 0
-    followup_sent = 0
-    for s in steps_data:
-        try:
-            step_num = int(s.get("step", 0))
-        except (ValueError, TypeError):
-            continue  # skip garbage rows (e.g. PostgreSQL \N NULL export artifact)
-        sent = _safe_num(s.get("sent"))
-        if step_num == 0:  # Step 0 = first email (0-indexed)
-            first_touch_sent += sent
-        else:
-            followup_sent += sent
-
-    # Today's numbers
-    today_str = today.isoformat()
-    today_daily = next((d for d in daily_data if d.get("date") == today_str), {})
-    sent_today     = _safe_num(today_daily.get("sent"))
-    replies_today  = _safe_num(today_daily.get("replies"))
-    opps_today     = _safe_num(today_daily.get("opportunities"))
+    daily_data = []
+    try:
+        daily_data = _http_get(daily_url, headers) or []
+    except Exception:
+        pass
 
     # 7-day averages (excluding today)
     past_days = [d for d in daily_data if d.get("date", "") < today_str]
     if past_days:
-        avg_sent_7d   = sum(_safe_num(d.get("sent")) for d in past_days) / len(past_days)
+        avg_sent_7d    = sum(_safe_num(d.get("sent")) for d in past_days) / len(past_days)
         avg_replies_7d = sum(_safe_num(d.get("replies")) for d in past_days) / len(past_days)
-        avg_opps_7d   = sum(_safe_num(d.get("opportunities")) for d in past_days) / len(past_days)
+        avg_opps_7d    = sum(_safe_num(d.get("opportunities")) for d in past_days) / len(past_days)
     else:
         avg_sent_7d = avg_replies_7d = avg_opps_7d = 0.0
 
-    # Reply rate (today vs 7-day avg)
+    # Rates (today, active campaigns only)
     reply_rate_today = (replies_today / sent_today * 100) if sent_today > 0 else 0.0
     reply_rate_7d    = (avg_replies_7d / avg_sent_7d * 100) if avg_sent_7d > 0 else 0.0
-    reply_rate_all   = (active_replies / active_sent * 100) if active_sent > 0 else 0.0
+    bounce_rate      = (active_bounced / active_sent * 100) if active_sent > 0 else 0.0
 
-    # Count not-yet-contacted leads in two phases:
-    # Phase 1 (inline): active campaigns only — fast, avoids timeouts
-    # Phase 2 (background): inactive campaigns — merges into cache later
+    # 5. Not-yet-contacted leads per active campaign (parallel)
     nc_by_campaign = {}
+    nc_threads = []
     for c in active_campaigns:
         cid = c.get("id", "")
-        if cid:
-            nc_by_campaign[cid] = _count_not_contacted(cid, headers)
+        if not cid:
+            continue
+        def _nc_worker(camp_id=cid):
+            nc_by_campaign[camp_id] = _count_not_contacted(camp_id, headers)
+        t = threading.Thread(target=_nc_worker, daemon=True)
+        t.start()
+        nc_threads.append(t)
+    for t in nc_threads:
+        t.join(timeout=REQUEST_TIMEOUT)
     not_contacted = sum(nc_by_campaign.values())
 
-    # Inactive campaigns that still need not-contacted counts
-    inactive_campaigns = [c for c in campaigns if c.get("status") != 1 and c.get("id")]
-    total_completed = sum(_safe_num(c.get("completed_count")) for c in analytics)
+    # In-progress = active leads - completed - bounced - not_contacted
+    in_progress = max(0, active_leads - active_completed - active_bounced - not_contacted)
 
     # Trend direction: compare today vs 7d avg
     opp_trend   = _trend(opps_today, avg_opps_7d)
     reply_trend = _trend(reply_rate_today, reply_rate_7d)
     sent_trend  = _trend(sent_today, avg_sent_7d)
 
-    # Build analytics lookup by campaign_id for efficient per-campaign join
-    analytics_by_id = {a.get("campaign_id"): a for a in analytics if a.get("campaign_id")}
+    # Inactive campaigns for background backfill
+    inactive_campaigns = [c for c in campaigns if c.get("status") != 1 and c.get("id")]
 
-    campaigns_list = [
-        {
-            "name":      c.get("name", "Unknown"),
-            "id":        c.get("id", ""),
-            "status":    "active" if c.get("status") == 1 else "paused",
-            "sent":      _safe_num(analytics_by_id.get(c.get("id"), {}).get("emails_sent_count")),
-            "replies":   _safe_num(analytics_by_id.get(c.get("id"), {}).get("reply_count")),
-            "leads":     _safe_num(analytics_by_id.get(c.get("id"), {}).get("leads_count")),
-            "completed": _safe_num(analytics_by_id.get(c.get("id"), {}).get("completed_count")),
-            "bounced":   _safe_num(analytics_by_id.get(c.get("id"), {}).get("bounced_count")),
-            "opps":      _safe_num(analytics_by_id.get(c.get("id"), {}).get("total_opportunities")),
-            "not_contacted": nc_by_campaign.get(c.get("id", ""), 0),
-            "in_progress": max(0, _safe_num(analytics_by_id.get(c.get("id"), {}).get("leads_count"))
-                               - _safe_num(analytics_by_id.get(c.get("id"), {}).get("completed_count"))
-                               - _safe_num(analytics_by_id.get(c.get("id"), {}).get("bounced_count"))
-                               - nc_by_campaign.get(c.get("id", ""), 0)),
-        }
-        for c in campaigns
-    ]
+    # Build per-campaign list with today's data
+    campaigns_list = []
+    for c in campaigns:
+        cid = c.get("id", "")
+        is_active = c.get("status") == 1
+        a = analytics_by_id.get(cid, {})
+        daily = daily_by_campaign.get(cid, {})
+        nc = nc_by_campaign.get(cid, 0)
+        leads = _safe_num(a.get("leads_count"))
+        completed = _safe_num(a.get("completed_count"))
+        bounced = _safe_num(a.get("bounced_count"))
+        camp_sent_today = daily.get("sent", 0)
+        camp_replies_today = daily.get("replies", 0)
+
+        campaigns_list.append({
+            "name":           c.get("name", "Unknown"),
+            "id":             cid,
+            "status":         "active" if is_active else "paused",
+            # Today's per-campaign metrics
+            "sent_today":     camp_sent_today,
+            "first_touch":    daily.get("first_touch", 0),
+            "followups":      daily.get("followups", 0),
+            "replies_today":  camp_replies_today,
+            "opps_today":     daily.get("opps", 0),
+            "reply_rate":     round(camp_replies_today / camp_sent_today * 100, 2) if camp_sent_today > 0 else 0.0,
+            # Pipeline (current state)
+            "not_contacted":  nc,
+            "in_progress":    max(0, leads - completed - bounced - nc),
+            # All-time (kept for reference)
+            "total_sent":     _safe_num(a.get("emails_sent_count")),
+            "total_bounced":  bounced,
+        })
 
     return {
         "platform": "instantly",
         "active_campaigns": len(active_campaigns),
         "total_campaigns": len(campaigns),
 
-        # Today's metrics
-        "sent_today":     sent_today,
-        "replies_today":  replies_today,
-        "opps_today":     opps_today,
+        # Today's metrics (aggregated from per-campaign daily data, active only)
+        "sent_today":        sent_today,
+        "first_touch_today": first_touch_today,
+        "followup_today":    followup_today,
+        "replies_today":     replies_today,
+        "opps_today":        opps_today,
 
-        # 7-day averages
+        # Rates (active campaigns only)
+        "reply_rate_today": round(reply_rate_today, 2),
+        "reply_rate_7d":    round(reply_rate_7d, 2),
+        "bounce_rate":      round(bounce_rate, 2),
+
+        # Pipeline (active campaigns only)
+        "not_contacted": not_contacted,
+        "in_progress":   in_progress,
+
+        # 7-day averages (for trends)
         "avg_sent_7d":    round(avg_sent_7d, 1),
         "avg_replies_7d": round(avg_replies_7d, 1),
         "avg_opps_7d":    round(avg_opps_7d, 1),
-
-        # All-time totals
-        "total_sent":     total_sent,
-        "total_replies":  total_replies,
-        "total_opps":     total_opps,
-        "total_leads":    total_leads,
-        "total_contacted": total_contacted,
-        "total_bounced":  total_bounced,
-
-        # Derived
-        "not_contacted":    not_contacted,
-        "in_progress":      max(0, active_leads - active_completed - active_bounced - not_contacted),
-        "first_touch_sent": first_touch_sent,
-        "followup_sent":    followup_sent,
-        "reply_rate_today": round(reply_rate_today, 2),
-        "reply_rate_7d":    round(reply_rate_7d, 2),
-        "reply_rate_all":   round(reply_rate_all, 2),
-        "bounce_rate":      round(active_bounced / active_sent * 100, 2) if active_sent > 0 else 0.0,
-
-        # Active-campaign-only aggregates (for accurate rate calculations)
-        "active_sent":    active_sent,
-        "active_replies": active_replies,
-        "active_bounced": active_bounced,
-        "active_opps":    active_opps,
 
         # Trend indicators
         "opp_trend":   opp_trend,
         "reply_trend": reply_trend,
         "sent_trend":  sent_trend,
 
-        # Per-campaign breakdown
+        # Per-campaign breakdown (with today's data)
         "campaigns": campaigns_list,
 
-        # Daily breakdown (for sparkline — last 7 days)
+        # Daily breakdown (workspace-wide, last 7 days for sparklines)
         "daily": [
             {
-                "date":  d.get("date"),
-                "sent":  _safe_num(d.get("sent")),
-                "opps":  _safe_num(d.get("opportunities")),
+                "date":    d.get("date"),
+                "sent":    _safe_num(d.get("sent")),
+                "opps":    _safe_num(d.get("opportunities")),
                 "replies": _safe_num(d.get("replies")),
             }
             for d in sorted(daily_data, key=lambda x: x.get("date", ""))
@@ -676,7 +708,7 @@ def fetch_emailbison_data(client_name: str, api_key: str) -> dict:
         "Accept": "application/json",
     }
 
-    today = datetime.now(timezone.utc).date()
+    today = datetime.now(EASTERN).date()
     seven_ago = today - timedelta(days=7)
 
     # 1. Campaign list — no pagination, returns flat data array
@@ -740,40 +772,42 @@ def fetch_emailbison_data(client_name: str, api_key: str) -> dict:
     reply_trend = _trend(reply_rate_today, reply_rate_7d)
     sent_trend  = _trend(sent_today, avg_sent_7d)
 
-    # 4. Per-campaign stats — active campaigns + up to 5 most recent non-active
-    # Uses POST /api/campaigns/{id}/stats with JSON body (GET returns 405)
-    # Response fields: emails_sent, interested, bounced, unique_replies_per_contact
-    active_cids = [c for c in campaigns_all if c.get("status", "").lower() == "active"]
-    paused_cids = [c for c in campaigns_all if c.get("status", "").lower() != "active"][:5]
-    campaigns_to_fetch = active_cids + paused_cids
+    # 4. Per-campaign today stats via campaign-events/stats with single campaign_id
+    today_str = today.isoformat()
+    active_camp_objs = [c for c in campaigns_all if c.get("status", "").lower() == "active"]
+    paused_camp_objs = [c for c in campaigns_all if c.get("status", "").lower() != "active"][:5]
+    campaigns_to_fetch = active_camp_objs + paused_camp_objs
 
-    def _fetch_eb_campaign_stats(c: dict) -> dict:
+    def _fetch_eb_campaign_today(c: dict) -> dict:
         cid = c.get("id", "")
-        try:
-            s = _http_post(
-                f"{EB_BASE}/campaigns/{cid}/stats",
-                headers,
-                {"start_date": seven_ago.isoformat(), "end_date": today.isoformat()},
-            ) or {}
-            s_data = s.get("data", s) if isinstance(s, dict) else {}
-        except Exception:
-            s_data = {}
+        # Today's stats for this campaign
+        camp_today = _eb_events_stats(today_str, today_str, [cid]) if cid else {}
+        camp_sent = _safe_num(camp_today.get("sent"))
+        camp_replies = _safe_num(camp_today.get("replied"))
+        camp_opps = _safe_num(camp_today.get("interested"))
+        camp_bounced = _safe_num(camp_today.get("bounced"))
         return {
-            "name":    c.get("name", "Unknown"),
-            "id":      cid,
-            "status":  c.get("status", "unknown"),
-            "sent":    _safe_num(s_data.get("emails_sent")),
-            "replies": _safe_num(s_data.get("unique_replies_per_contact")),
-            "bounced": _safe_num(s_data.get("bounced")),
-            "opps":    _safe_num(s_data.get("interested")),
+            "name":          c.get("name", "Unknown"),
+            "id":            cid,
+            "status":        c.get("status", "unknown").lower(),
+            "sent_today":    camp_sent,
+            "first_touch":   0,  # EmailBison doesn't expose first-touch vs follow-up
+            "followups":     0,
+            "replies_today": camp_replies,
+            "opps_today":    camp_opps,
+            "reply_rate":    round(camp_replies / camp_sent * 100, 2) if camp_sent > 0 else 0.0,
+            "not_contacted": 0,  # Not available per-campaign in EB
+            "in_progress":   0,
+            "total_sent":    0,
+            "total_bounced": camp_bounced,
         }
 
-    # Fetch per-campaign stats in parallel (bounded by campaigns_to_fetch size)
+    # Fetch per-campaign stats in parallel
     campaign_results: list = [None] * len(campaigns_to_fetch)
     stat_threads = []
     for idx, c in enumerate(campaigns_to_fetch):
         def _worker(i=idx, camp=c):
-            campaign_results[i] = _fetch_eb_campaign_stats(camp)
+            campaign_results[i] = _fetch_eb_campaign_today(camp)
         t = threading.Thread(target=_worker, daemon=True)
         t.start()
         stat_threads.append(t)
@@ -787,32 +821,36 @@ def fetch_emailbison_data(client_name: str, api_key: str) -> dict:
         "active_campaigns": len(active_campaigns),
         "total_campaigns": len(campaigns_all),
 
-        "sent_today":     sent_today,
-        "replies_today":  replies_today,
-        "opps_today":     opps_today,
-        "opens_today":    opens_today,
+        # Today's metrics (active campaigns only)
+        "sent_today":        sent_today,
+        "first_touch_today": 0,  # EmailBison doesn't expose first-touch vs follow-up
+        "followup_today":    0,
+        "replies_today":     replies_today,
+        "opps_today":        opps_today,
 
+        # Rates (active campaigns only)
+        "reply_rate_today": round(reply_rate_today, 2),
+        "reply_rate_7d":    round(reply_rate_7d, 2),
+        "bounce_rate":      round(bounce_rate, 2),
+
+        # Pipeline
+        "not_contacted": not_contacted,
+        "in_progress":   None,  # Not available in EmailBison
+
+        # 7-day averages (for trends)
         "avg_sent_7d":    round(avg_sent_7d, 1),
         "avg_replies_7d": round(avg_reply_7d, 1),
         "avg_opps_7d":    round(avg_opps_7d, 1),
 
-        "not_contacted":    not_contacted,
-        "in_progress":      None,
-        "first_touch_sent": None,
-        "followup_sent":    None,
-        "reply_rate_today": round(reply_rate_today, 2),
-        "reply_rate_7d":    round(reply_rate_7d, 2),
-        "bounce_rate":      round(bounce_rate, 2),
-        "opps_7d_total":    opps_7d,
-
+        # Trend indicators
         "opp_trend":   opp_trend,
         "reply_trend": reply_trend,
         "sent_trend":  sent_trend,
 
-        # Per-campaign breakdown (active + top 5 recent paused)
+        # Per-campaign breakdown (with today's data)
         "campaigns": campaigns_list,
 
-        "daily": [],  # EmailBison doesn't expose per-day breakdown easily
+        "daily": [],
     }
 
 
