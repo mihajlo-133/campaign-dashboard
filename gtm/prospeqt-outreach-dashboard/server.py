@@ -466,6 +466,7 @@ def fetch_instantly_data(client_name: str, api_key: str) -> dict:
     # 1. Campaigns list (for status/active count)
     campaigns = _paginate_instantly(f"{INSTANTLY_BASE}/campaigns", headers)
     active_campaigns = [c for c in campaigns if c.get("status") == 1]
+    active_ids = {c.get("id") for c in active_campaigns}
 
     # 2. All-time analytics (totals for reply rate, opps)
     analytics = _paginate_instantly(f"{INSTANTLY_BASE}/campaigns/analytics", headers)
@@ -477,6 +478,15 @@ def fetch_instantly_data(client_name: str, api_key: str) -> dict:
     total_leads     = sum(_safe_num(c.get("leads_count")) for c in analytics)
     total_contacted = sum(_safe_num(c.get("contacted_count")) for c in analytics)
     total_bounced   = sum(_safe_num(c.get("bounced_count")) for c in analytics)
+
+    # Active-campaign-only metrics (exclude paused/completed campaigns)
+    active_analytics = [a for a in analytics if a.get("campaign_id") in active_ids]
+    active_sent      = sum(_safe_num(c.get("emails_sent_count")) for c in active_analytics)
+    active_replies   = sum(_safe_num(c.get("reply_count")) for c in active_analytics)
+    active_bounced   = sum(_safe_num(c.get("bounced_count")) for c in active_analytics)
+    active_opps      = sum(_safe_num(c.get("total_opportunities")) for c in active_analytics)
+    active_leads     = sum(_safe_num(c.get("leads_count")) for c in active_analytics)
+    active_completed = sum(_safe_num(c.get("completed_count")) for c in active_analytics)
 
     # 3. Daily analytics (last 7 days) for trends and today's numbers
     daily_url = (
@@ -520,7 +530,7 @@ def fetch_instantly_data(client_name: str, api_key: str) -> dict:
     # Reply rate (today vs 7-day avg)
     reply_rate_today = (replies_today / sent_today * 100) if sent_today > 0 else 0.0
     reply_rate_7d    = (avg_replies_7d / avg_sent_7d * 100) if avg_sent_7d > 0 else 0.0
-    reply_rate_all   = (total_replies / total_sent * 100) if total_sent > 0 else 0.0
+    reply_rate_all   = (active_replies / active_sent * 100) if active_sent > 0 else 0.0
 
     # Count not-yet-contacted leads in two phases:
     # Phase 1 (inline): active campaigns only — fast, avoids timeouts
@@ -589,13 +599,19 @@ def fetch_instantly_data(client_name: str, api_key: str) -> dict:
 
         # Derived
         "not_contacted":    not_contacted,
-        "in_progress":      max(0, total_leads - total_completed - total_bounced - not_contacted),
+        "in_progress":      max(0, active_leads - active_completed - active_bounced - not_contacted),
         "first_touch_sent": first_touch_sent,
         "followup_sent":    followup_sent,
         "reply_rate_today": round(reply_rate_today, 2),
         "reply_rate_7d":    round(reply_rate_7d, 2),
         "reply_rate_all":   round(reply_rate_all, 2),
-        "bounce_rate":      round(total_bounced / total_sent * 100, 2) if total_sent > 0 else 0.0,
+        "bounce_rate":      round(active_bounced / active_sent * 100, 2) if active_sent > 0 else 0.0,
+
+        # Active-campaign-only aggregates (for accurate rate calculations)
+        "active_sent":    active_sent,
+        "active_replies": active_replies,
+        "active_bounced": active_bounced,
+        "active_opps":    active_opps,
 
         # Trend indicators
         "opp_trend":   opp_trend,
@@ -670,6 +686,7 @@ def fetch_emailbison_data(client_name: str, api_key: str) -> dict:
     # Status is capitalized ("Active", "Paused", etc.) — compare case-insensitively
     active_campaigns = [c for c in campaigns_all if c.get("status", "").lower() == "active"]
     all_cids = [c["id"] for c in campaigns_all if c.get("id")]
+    active_cids_list = [c["id"] for c in active_campaigns if c.get("id")]
 
     # 2. Aggregate stats via campaign-events/stats.
     # REQUIRED: must pass at least one campaign_id. Builds ?campaign_ids[]=N&... query.
@@ -683,8 +700,10 @@ def fetch_emailbison_data(client_name: str, api_key: str) -> dict:
         series = resp.get("data", []) if isinstance(resp, dict) else []
         return _eb_parse_events_timeseries(series)
 
-    stats_7d    = _eb_events_stats(seven_ago.isoformat(), today.isoformat(), all_cids)
-    stats_today = _eb_events_stats(today.isoformat(), today.isoformat(), all_cids)
+    # Use active campaign IDs only; fall back to all_cids if no active campaigns
+    stats_cids = active_cids_list if active_cids_list else all_cids
+    stats_7d    = _eb_events_stats(seven_ago.isoformat(), today.isoformat(), stats_cids)
+    stats_today = _eb_events_stats(today.isoformat(), today.isoformat(), stats_cids)
 
     sent_today    = _safe_num(stats_today.get("sent"))
     replies_today = _safe_num(stats_today.get("replied"))

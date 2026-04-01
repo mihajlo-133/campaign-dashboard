@@ -99,6 +99,59 @@ class TestFetchInstantlyData:
         assert result["first_touch_sent"] == 300
         assert result["followup_sent"] == 200  # 150 + 50
 
+    def test_active_campaign_filtering(self, monkeypatch):
+        """active_* fields use only active campaigns; paused campaigns excluded from rates."""
+        campaigns = [
+            {"id": "active1", "name": "Active Camp", "status": 1},
+            {"id": "paused1", "name": "Paused Camp", "status": 3},
+        ]
+        analytics = [
+            {
+                "campaign_id": "active1",
+                "emails_sent_count": 1000,
+                "reply_count": 20,
+                "total_opportunities": 5,
+                "leads_count": 400,
+                "contacted_count": 300,
+                "bounced_count": 10,
+                "completed_count": 280,
+            },
+            {
+                "campaign_id": "paused1",
+                "emails_sent_count": 5000,
+                "reply_count": 10,
+                "total_opportunities": 2,
+                "leads_count": 2000,
+                "contacted_count": 1800,
+                "bounced_count": 500,  # big number — should NOT inflate active bounce_rate
+                "completed_count": 1700,
+            },
+        ]
+
+        self._patch_http(monkeypatch, campaigns=campaigns, analytics=analytics)
+
+        result = server.fetch_instantly_data("TestClient", "fake-key")
+
+        # active_* fields should reflect only the active campaign
+        assert result["active_sent"] == 1000
+        assert result["active_replies"] == 20
+        assert result["active_bounced"] == 10
+        assert result["active_opps"] == 5
+
+        # total_* fields should include both campaigns (backward compat)
+        assert result["total_sent"] == 6000
+        assert result["total_replies"] == 30
+
+        # bounce_rate uses active only — 10/1000 = 1.0%
+        assert result["bounce_rate"] == 1.0
+
+        # reply_rate_all uses active only — 20/1000 = 2.0%
+        assert result["reply_rate_all"] == 2.0
+
+        # in_progress uses active only
+        # active_leads=400, active_completed=280, active_bounced=10, not_contacted=0
+        assert result["in_progress"] == 110  # 400 - 280 - 10 - 0
+
 
 class TestFetchEmailBisonData:
     """Test EmailBison fetcher with monkeypatched HTTP calls."""

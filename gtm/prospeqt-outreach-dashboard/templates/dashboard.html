@@ -259,7 +259,7 @@ tr.expand-row.visible{display:table-row}
           <th class="num col-sm-hide" data-col="pipeline" data-tip="In-progress + not yet contacted leads">Pipeline</th>
           <th class="num col-sm-hide" data-col="reply_rate_today" data-tip="% of emails sent today that received a reply">Reply Rate</th>
           <th class="num col-sm-hide" data-col="opps_today" data-tip="Positive replies indicating genuine interest">Opps</th>
-          <th class="num col-sm-hide" data-col="bounce_rate" data-tip="% of all-time sent emails that bounced">Bounce</th>
+          <th class="num col-sm-hide" data-col="bounce_rate" data-tip="Bounce rate from active campaigns only (paused/completed excluded)">Bounce</th>
           <th data-col="status" data-tip="Overall health based on KPI thresholds">Status</th>
           <th style="width:32px"></th>
         </tr>
@@ -390,10 +390,10 @@ function buildCampaignRow(c){
   var h='<tr>';
   h+='<td data-label="Campaign"><span class="camp-name" title="'+c.name+'">'+c.name+'</span></td>';
   h+='<td data-label="Status" style="white-space:nowrap"><span class="camp-status-dot '+dotCls+'"></span>'+(isActive?'Active':'Paused')+'</td>';
-  h+='<td data-label="Sent" class="num">'+fmt(c.sent)+'</td>';
+  h+='<td data-label="Total Sent" class="num">'+fmt(c.sent)+'</td>';
   h+='<td data-label="Pipeline" class="num" style="white-space:normal"><div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;line-height:1.2"><span style="color:var(--blue);font-weight:600;font-size:13px;font-family:\'Space Mono\',monospace">'+ip+'</span><span style="font-size:10px;color:var(--tx3)">'+nc+' not contacted</span></div></td>';
-  h+='<td data-label="Replies" class="num" style="color:'+(c.replies>0?'#29753c':'var(--tx3)')+'">'+fmt(c.replies)+'</td>';
-  h+='<td data-label="Opps" class="num" style="color:'+(c.opps>0?'#29753c':'var(--tx3)')+'">'+fmt(c.opps)+'</td>';
+  h+='<td data-label="Total Replies" class="num" style="color:'+(c.replies>0?'#29753c':'var(--tx3)')+'">'+fmt(c.replies)+'</td>';
+  h+='<td data-label="Total Opps" class="num" style="color:'+(c.opps>0?'#29753c':'var(--tx3)')+'">'+fmt(c.opps)+'</td>';
   h+='<td data-label="Reply Rate" class="num">'+rr+'</td>';
   h+='</tr>';
   return h;
@@ -405,7 +405,7 @@ function buildCampaignTable(campaigns){
   var paused=campaigns.filter(function(c){return c.status==='paused'||c.status==='stopped'}).sort(bySent);
   var other=campaigns.filter(function(c){return c.status!=='active'&&c.status!=='paused'&&c.status!=='stopped'}).sort(bySent);
   var h='<table class="camp-table">';
-  h+='<thead><tr><th>Campaign</th><th>Status</th><th class="num">Sent</th><th class="num">Pipeline</th><th class="num">Replies</th><th class="num">Opps</th><th class="num">Reply Rate</th></tr></thead>';
+  h+='<thead><tr><th>Campaign</th><th>Status</th><th class="num">Total Sent</th><th class="num">Pipeline</th><th class="num">Total Replies</th><th class="num">Total Opps</th><th class="num">Reply Rate</th></tr></thead>';
   h+='<tbody>';
   // Active campaigns: always visible
   if(active.length===0){h+='<tr><td colspan="7" style="font-size:12px;color:var(--tx3);padding:12px">No active campaigns</td></tr>';}
@@ -474,7 +474,7 @@ function buildExpandContent(name,d){
   h+='<div class="exp-kpi" style="flex:2;min-width:340px">';
   h+='<div class="exp-kpi-label">Pipeline</div>';
   h+='<div style="display:flex;gap:16px;margin-bottom:8px;flex-wrap:nowrap;align-items:flex-start">';
-  h+='<div style="flex:1;min-width:90px"><div class="exp-kpi-val" style="font-size:20px">'+fmt(d.not_contacted!=null?(d.not_contacted+(d.in_progress||0)):null)+'</div><div class="exp-kpi-sub">total pool</div></div>';
+  h+='<div style="flex:1;min-width:90px"><div class="exp-kpi-val" style="font-size:20px">'+fmt(d.not_contacted!=null?(d.not_contacted+(d.in_progress||0)):null)+'</div><div class="exp-kpi-sub">active pool</div></div>';
   h+='<div style="flex:1;min-width:90px"><div class="exp-kpi-val" style="font-size:20px;color:var(--blue)">'+ipExp+'</div><div class="exp-kpi-sub">in progress</div></div>';
   var runwayColor=poolD2!=null&&poolD2<3?'color:var(--amber)':'color:var(--tx3)';
   h+='<div style="flex:1;min-width:90px"><div class="exp-kpi-val '+ncR+'" style="font-size:20px">'+fmt(d.not_contacted)+'</div><div class="exp-kpi-sub">Not contacted</div><div class="exp-kpi-sub" style="margin-top:2px;'+runwayColor+'">'+poolDaysLabel+'</div></div>';
@@ -489,7 +489,7 @@ function buildExpandContent(name,d){
     h+='</div>';
     h+='<div style="display:flex;justify-content:space-between;margin-top:6px;font-size:10px;color:var(--tx3);font-family:\'Space Mono\',monospace;gap:16px">';
     h+='<span>First touch: '+fmt(d.first_touch_sent)+' ('+ftPct+'%)</span>';
-    h+='<span style="text-align:right">Follow-up: '+fmt(d.followup_sent)+' ('+fuPct+'%)</span>';
+    h+='<span style="text-align:right">Follow-up: '+fmt(d.followup_sent)+' ('+fuPct+'%) &middot; active campaigns</span>';
     h+='</div>';
   } else if(!isInstantly){
     h+='<div style="font-size:11px;color:var(--tx3);margin-top:4px">Step analytics not available</div>';
@@ -507,11 +507,11 @@ function buildExpandContent(name,d){
   var brWarnDisp=t.bounce_rate_warn!=null?t.bounce_rate_warn:3;
   var brRedDisp=t.bounce_rate_red!=null?t.bounce_rate_red:5;
   h+='<div class="exp-kpi"><div class="exp-kpi-label">Bounce Rate</div><div class="exp-kpi-val '+bc+'">'+fmtPct(d.bounce_rate)+'</div>';
-  h+='<div class="exp-kpi-sub">Warn &gt;'+brWarnDisp+'% &middot; Red &gt;'+brRedDisp+'%</div></div>';
+  h+='<div class="exp-kpi-sub">Active campaigns &middot; Warn &gt;'+brWarnDisp+'% &middot; Red &gt;'+brRedDisp+'%</div></div>';
   h+='</div>';
   // Row 2: Campaigns sub-table
   if(d.campaigns&&d.campaigns.length>0){
-    h+='<div style="margin-bottom:20px"><div class="exp-section-label">Campaigns &mdash; '+(d.active_campaigns||0)+' active / '+(d.total_campaigns||0)+' total</div>';
+    h+='<div style="margin-bottom:20px"><div class="exp-section-label">Active Campaigns &mdash; '+(d.active_campaigns||0)+' running</div>';
     h+=buildCampaignTable(d.campaigns);
     h+='</div>';
   }
