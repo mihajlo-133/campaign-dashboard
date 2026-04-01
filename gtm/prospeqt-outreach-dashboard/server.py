@@ -1157,9 +1157,15 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         if self.path == "/api/refresh":
-            # Invalidate all cache entries so next GET fetches fresh
+            # Invalidate cache AND clear stale data so clients see "Loading..."
             with _cache_lock:
                 _cache_ts.clear()
+                _cache_data.clear()
+                _cache_errors.clear()
+            # Kick off immediate re-fetch in background threads
+            for name in CLIENTS:
+                t = threading.Thread(target=_fetch_client, args=(name,), daemon=True)
+                t.start()
             self.send_response(204)
             self.end_headers()
         elif self.path == "/admin/login":
