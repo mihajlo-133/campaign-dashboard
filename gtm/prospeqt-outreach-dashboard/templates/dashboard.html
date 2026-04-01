@@ -257,12 +257,12 @@ tr.expand-row.visible{display:table-row}
           <th class="num" data-col="sent_today" data-tip="Emails sent today (Eastern time)">Sent</th>
           <th class="num col-sm-hide" data-col="first_touch_today" data-tip="First-touch emails sent today">1st Touch</th>
           <th class="num col-sm-hide" data-col="followup_today" data-tip="Follow-up emails sent today">Follow-ups</th>
-          <th class="num" data-col="reply_rate_today" data-tip="Reply rate today (active campaigns)">Reply %</th>
-          <th class="num col-sm-hide" data-col="replies_today" data-tip="Replies received today">Replies</th>
+          <th class="num" data-col="reply_rate_today" data-tip="Reply rate today (active campaigns)">Reply Rate</th>
+          <th class="num col-sm-hide" data-col="replies_today" data-tip="Replies received today">Replied</th>
           <th class="num col-sm-hide" data-col="opps_today" data-tip="Opportunities today">Opps</th>
-          <th class="num col-sm-hide" data-col="bounce_rate" data-tip="Bounce rate (active campaigns)">Bounce</th>
-          <th class="num col-sm-hide" data-col="not_contacted" data-tip="Leads not yet contacted">Queued</th>
-          <th class="num col-sm-hide" data-col="in_progress" data-tip="Leads in progress (contacted, not completed)">In Prog</th>
+          <th class="num col-sm-hide" data-col="bounce_rate" data-tip="Bounce rate (active campaigns)">Bounce Rate</th>
+          <th class="num col-sm-hide" data-col="not_contacted" data-tip="Leads not yet contacted">Not Contacted</th>
+          <th class="num col-sm-hide" data-col="in_progress" data-tip="Leads contacted but not completed sequence">In Progress</th>
           <th data-col="status" data-tip="Overall health based on KPI thresholds">Status</th>
           <th style="width:32px"></th>
         </tr>
@@ -357,7 +357,7 @@ function renderTable(data){
     rows+='<td class="num col-sm-hide"><span class="cell-val '+oc+'">'+fmt(d.opps_today)+'</span>'+trend(d.opp_trend)+'</td>';
     // Bounce
     rows+='<td class="num col-sm-hide"><span class="cell-val '+bc+'">'+fmtPct(d.bounce_rate)+'</span></td>';
-    // Queued (not contacted)
+    // Not Contacted
     rows+='<td class="num col-sm-hide"><span class="cell-val">'+fmt(d.not_contacted)+'</span></td>';
     // In progress
     var ipVal=d.in_progress!=null?fmt(d.in_progress):'N/A';
@@ -393,7 +393,7 @@ function renderChips(data){
   h+='<span class="chip"><strong>'+fmt(totalFirstTouch)+'</strong>&nbsp;1st touch</span>';
   h+='<span class="chip"><strong>'+fmt(totalFollowups)+'</strong>&nbsp;follow-ups</span>';
   h+='<span class="chip c-blue"><strong>'+fmt(totalOpps)+'</strong>&nbsp;opps</span>';
-  h+='<span class="chip">Reply&nbsp;<strong>'+fmtPct(avgRR)+'</strong></span>';
+  h+='<span class="chip">Reply rate&nbsp;<strong>'+fmtPct(avgRR)+'</strong></span>';
   if(counts.red)   h+='<span class="chip c-red"><span class="dot dot-red"></span><strong>'+counts.red+'</strong>&nbsp;action needed</span>';
   if(counts.amber) h+='<span class="chip c-amber"><span class="dot dot-amber"></span><strong>'+counts.amber+'</strong>&nbsp;watch</span>';
   if(counts.green) h+='<span class="chip c-green"><span class="dot dot-green"></span><strong>'+counts.green+'</strong>&nbsp;on track</span>';
@@ -416,8 +416,8 @@ function buildCampaignRow(c){
   h+='<td data-label="Replies" class="num" style="color:'+(c.replies_today>0?'#29753c':'var(--tx3)')+'">'+fmt(c.replies_today)+'</td>';
   h+='<td data-label="Opps" class="num" style="color:'+(c.opps_today>0?'#29753c':'var(--tx3)')+'">'+fmt(c.opps_today)+'</td>';
   h+='<td data-label="Reply Rate" class="num">'+rr+'</td>';
-  h+='<td data-label="Queued" class="num">'+nc+'</td>';
-  h+='<td data-label="In Prog" class="num">'+ip+'</td>';
+  h+='<td data-label="Not Contacted" class="num">'+nc+'</td>';
+  h+='<td data-label="In Progress" class="num">'+ip+'</td>';
   h+='</tr>';
   return h;
 }
@@ -428,7 +428,7 @@ function buildCampaignTable(campaigns){
   var paused=campaigns.filter(function(c){return c.status==='paused'||c.status==='stopped'}).sort(bySent);
   var other=campaigns.filter(function(c){return c.status!=='active'&&c.status!=='paused'&&c.status!=='stopped'}).sort(bySent);
   var h='<table class="camp-table">';
-  h+='<thead><tr><th>Campaign</th><th>Status</th><th class="num">Sent</th><th class="num">1st Touch</th><th class="num">Follow-ups</th><th class="num">Replies</th><th class="num">Opps</th><th class="num">Reply %</th><th class="num">Queued</th><th class="num">In Prog</th></tr></thead>';
+  h+='<thead><tr><th>Campaign</th><th>Status</th><th class="num">Sent</th><th class="num">1st Touch</th><th class="num">Follow-ups</th><th class="num">Replied</th><th class="num">Opps</th><th class="num">Reply Rate</th><th class="num">Not Contacted</th><th class="num">In Progress</th></tr></thead>';
   h+='<tbody>';
   // Active campaigns: always visible
   if(active.length===0){h+='<tr><td colspan="10" style="font-size:12px;color:var(--tx3);padding:12px">No active campaigns</td></tr>';}
@@ -636,12 +636,12 @@ function renderCards(data){
     h+='<div class="m-card-metrics">';
     h+='<div><div class="m-metric-label">Sent Today</div><div class="m-metric-val cell-val '+sc+'">'+fmt(d.sent_today)+' '+trend(d.sent_trend)+'</div></div>';
     h+='<div><div class="m-metric-label">Reply Rate</div><div class="m-metric-val cell-val '+rrMobileCls+'">'+rrMobile+'</div></div>';
-    h+='<div><div class="m-metric-label">Replies</div><div class="m-metric-val" style="'+(d.replies_today>0?'color:#29753c':'')+'">'+fmt(d.replies_today)+'</div></div>';
-    h+='<div><div class="m-metric-label">Opps</div><div class="m-metric-val cell-val '+oc+'">'+fmt(d.opps_today)+'</div></div>';
+    h+='<div><div class="m-metric-label">Replied</div><div class="m-metric-val" style="'+(d.replies_today>0?'color:#29753c':'')+'">'+fmt(d.replies_today)+'</div></div>';
+    h+='<div><div class="m-metric-label">Opportunities</div><div class="m-metric-val cell-val '+oc+'">'+fmt(d.opps_today)+'</div></div>';
     h+='</div>';
     var mipVal=d.in_progress!=null?fmt(d.in_progress):'N/A';
     var mncVal=d.not_contacted!=null?fmt(d.not_contacted):'--';
-    h+='<div style="font-size:12px;color:var(--tx2);margin-top:10px;padding-top:10px;border-top:1px solid var(--bd)">Pipeline: <span style="color:var(--tx3)">'+mncVal+'</span> queued &middot; <span style="color:var(--blue);font-weight:600">'+mipVal+'</span> in progress</div>';
+    h+='<div style="font-size:12px;color:var(--tx2);margin-top:10px;padding-top:10px;border-top:1px solid var(--bd)"><span style="color:var(--tx3)">'+mncVal+'</span> not contacted &middot; <span style="color:var(--blue);font-weight:600">'+mipVal+'</span> in progress</div>';
     // Inline expand detail
     h+='<div class="m-card-detail">';
     if(isExp){h+=buildExpandContent(name,d);}
