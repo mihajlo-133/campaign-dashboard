@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Dashboard Admin</title>
+<style>
+:root{--bg:#0c0c0e;--bg-el:#161618;--bg-hov:#1f1f22;--bd:#2a2a2e;--bd-s:#3a3a3e;--tx1:#f0f0f0;--tx2:#909090;--tx3:#7a7a7e;--blue:#2756f7;--blue-bg:rgba(39,86,247,.15);--green:#34C759;--amber:#f59e0b;--red:#C33939;--sh:0 4px 12px rgba(0,0,0,.3)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--tx1);font-family:'Inter',system-ui,sans-serif;font-size:14px;line-height:1.5;padding:24px}
+.shell{max-width:1100px;margin:0 auto}
+.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px}
+h1{font-size:18px;font-weight:600}
+.logout{font-size:12px;color:var(--tx2);text-decoration:none}
+.logout:hover{color:var(--tx1)}
+.section{background:var(--bg-el);border:1px solid var(--bd);border-radius:12px;padding:20px;margin-bottom:20px;box-shadow:var(--sh)}
+.section-title{font-size:13px;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:16px}
+table{width:100%;border-collapse:collapse}
+th{font-size:11px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;padding:8px 12px;text-align:left;border-bottom:1px solid var(--bd)}
+th.num{text-align:right}
+td{padding:8px 12px;border-bottom:1px solid var(--bd);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:nth-child(even) td{background:rgba(255,255,255,.015)}
+.td-label{color:var(--tx2);font-size:13px}
+input[type=number]{background:var(--bg);border:1px solid var(--bd);border-radius:6px;color:var(--tx1);font-size:13px;padding:5px 8px;width:90px;outline:none;text-align:right}
+input[type=number]:focus{border-color:var(--blue)}
+input[type=number].overridden{border-left:3px solid var(--blue)}
+.client-name{font-weight:500}
+.plat-badge{font-size:10px;color:var(--tx3);background:var(--bg);border:1px solid var(--bd);border-radius:4px;padding:2px 6px;margin-left:6px}
+.chevron{cursor:pointer;color:var(--tx3);font-size:11px;user-select:none;padding:2px 6px;border-radius:4px}
+.chevron:hover{background:var(--bg-hov);color:var(--tx1)}
+.override-row{display:none}
+.override-row.open{display:table-row-group}
+.override-inner{padding:12px 12px 12px 24px;background:var(--bg)}
+.override-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px}
+.override-field{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.override-label{font-size:12px;color:var(--tx2)}
+.reset-link{font-size:11px;color:var(--blue);cursor:pointer;white-space:nowrap}
+.reset-link:hover{text-decoration:underline}
+.export-area{margin-top:12px}
+textarea{width:100%;background:var(--bg);border:1px solid var(--bd);border-radius:8px;color:var(--tx1);font-size:12px;font-family:monospace;padding:12px;resize:vertical;min-height:120px;outline:none}
+.instructions{font-size:12px;color:var(--tx2);margin-bottom:8px}
+.save-bar{display:flex;align-items:center;gap:12px;margin-top:20px}
+.save-btn{padding:10px 24px;border-radius:8px;border:none;background:var(--blue);color:#fff;font-size:14px;font-weight:600;cursor:pointer}
+.save-btn:disabled{opacity:.4;cursor:not-allowed}
+.save-btn:not(:disabled):hover{opacity:.9}
+.toast{display:none;padding:8px 16px;border-radius:8px;font-size:13px}
+.toast.ok{background:rgba(52,199,89,.15);color:var(--green);border:1px solid rgba(52,199,89,.25)}
+.toast.err{background:rgba(195,57,57,.12);color:var(--red);border:1px solid rgba(195,57,57,.2)}
+</style>
+</head>
+<body>
+<div class="shell">
+<div class="topbar"><h1>Dashboard Admin</h1><a class="logout" href="/admin/logout">Sign out</a></div>
+
+<div class="section">
+<div class="section-title">Global Thresholds</div>
+<table id="gt-table">
+<thead><tr><th>Metric</th><th class="num">Warn</th><th class="num">Red</th></tr></thead>
+<tbody>
+<tr><td class="td-label">Reply Rate (%)</td><td><input type="number" step="0.1" data-gt="reply_rate_warn"></td><td><input type="number" step="0.1" data-gt="reply_rate_red"></td></tr>
+<tr><td class="td-label">Sent Volume (fraction of KPI)</td><td><input type="number" step="0.05" data-gt="sent_pct_warn"></td><td><input type="number" step="0.05" data-gt="sent_pct_red"></td></tr>
+<tr><td class="td-label">Bounce Rate (%)</td><td><input type="number" step="0.5" data-gt="bounce_rate_warn"></td><td><input type="number" step="0.5" data-gt="bounce_rate_red"></td></tr>
+<tr><td class="td-label">Lead Pool (days)</td><td><input type="number" step="1" data-gt="pool_days_warn"></td><td><input type="number" step="1" data-gt="pool_days_red"></td></tr>
+<tr><td class="td-label">Opps vs 7d Avg (fraction)</td><td><input type="number" step="0.05" data-gt="opps_pct_warn"></td><td class="td-label" style="color:var(--tx3);font-size:12px">n/a</td></tr>
+</tbody></table>
+</div>
+<div class="section">
+<div class="section-title">Client KPI Targets</div>
+<table id="kpi-table">
+<thead><tr><th>Client</th><th class="num">Sent/Day</th><th class="num">Pool Target</th><th class="num">Opps/Day</th><th class="num">Reply Rate %</th><th></th></tr></thead>
+<tbody id="kpi-tbody"></tbody>
+</table>
+</div>
+<div class="section">
+<div class="section-title">Export Config</div>
+<p class="instructions">Click Export to generate the current config. Paste into <code>DASHBOARD_CONFIG</code> in Render env vars to persist across deploys.</p>
+<button onclick="exportConfig()" style="padding:8px 16px;border-radius:6px;border:1px solid var(--bd);background:var(--bg-hov);color:var(--tx1);font-size:13px;cursor:pointer">Export Config</button>
+<div class="export-area" id="export-area" style="display:none"><textarea id="export-txt" readonly onclick="this.select()"></textarea></div>
+</div>
+<div class="save-bar">
+<button class="save-btn" id="save-btn" disabled onclick="saveConfig()">Save Changes</button>
+<div class="toast" id="toast"></div>
+</div>
+</div>
+
+<script>
+var _cfg = null, _origJson = '';
+var THRESH_KEYS = ['reply_rate_warn','reply_rate_red','sent_pct_warn','sent_pct_red','bounce_rate_warn','bounce_rate_red','pool_days_warn','pool_days_red','opps_pct_warn'];
+var THRESH_LABELS = {reply_rate_warn:'Reply Rate Warn',reply_rate_red:'Reply Rate Red',sent_pct_warn:'Sent Pct Warn',sent_pct_red:'Sent Pct Red',bounce_rate_warn:'Bounce Warn',bounce_rate_red:'Bounce Red',pool_days_warn:'Pool Days Warn',pool_days_red:'Pool Days Red',opps_pct_warn:'Opps Pct Warn'};
+
+fetch('/admin/api/config').then(function(r){return r.json();}).then(function(cfg){
+  _cfg = cfg; _origJson = JSON.stringify(cfg);
+  var gt = cfg.global_thresholds || {};
+  document.querySelectorAll('[data-gt]').forEach(function(inp){
+    var k = inp.getAttribute('data-gt');
+    if(gt[k] !== undefined) inp.value = gt[k];
+  });
+  buildKpiRows(cfg);
+  document.querySelectorAll('input').forEach(function(i){i.addEventListener('input', checkDirty);});
+});
+function buildKpiRows(cfg){
+  var clients = cfg.clients || {}, gt = cfg.global_thresholds || {};
+  var tb = document.getElementById('kpi-tbody'), html = '';
+  Object.keys(clients).forEach(function(name){
+    var c = clients[name], ct = c.thresholds || {};
+    var rowId = 'row-' + name.replace(/[^a-z0-9]/gi,'_');
+    html += '<tr>';
+    html += '<td><span class="client-name">'+name+'</span><span class="chevron" onclick="toggleOverrides(\\''+rowId+'\\')" id="chev-'+rowId+'">&#9654; overrides</span></td>';
+    html += '<td><input type="number" data-client="'+name+'" data-kpi="sent" value="'+(c.sent||'')+'"></td>';
+    html += '<td><input type="number" data-client="'+name+'" data-kpi="not_contacted" value="'+(c.not_contacted||'')+'"></td>';
+    html += '<td><input type="number" step="0.1" data-client="'+name+'" data-kpi="opps_per_day" value="'+(c.opps_per_day||'')+'"></td>';
+    html += '<td><input type="number" step="0.1" data-client="'+name+'" data-kpi="reply_rate" value="'+(c.reply_rate||'')+'"></td>';
+    html += '<td></td></tr>';
+    html += '<tbody class="override-row" id="'+rowId+'">';
+    html += '<tr><td colspan="6"><div class="override-inner"><div class="override-grid">';
+    THRESH_KEYS.forEach(function(k){
+      var val = ct[k] !== undefined ? ct[k] : '';
+      var gval = gt[k] !== undefined ? gt[k] : '';
+      var ovr = ct[k] !== undefined;
+      html += '<div class="override-field">';
+      html += '<span class="override-label">'+THRESH_LABELS[k]+'</span>';
+      html += '<input type="number" step="0.1" data-client="'+name+'" data-thresh="'+k+'" value="'+val+'" placeholder="'+gval+'" class="'+(ovr?'overridden':'')+'" style="width:80px">';
+      html += '<span class="reset-link" onclick="resetOverride(\\''+name+'\\',\\''+k+'\\')">Reset</span>';
+      html += '</div>';
+    });
+    html += '</div></div></td></tr></tbody>';
+  });
+  document.getElementById('kpi-tbody').innerHTML = html;
+}
+
+function toggleOverrides(rowId){
+  var el = document.getElementById(rowId);
+  var chev = document.getElementById('chev-'+rowId);
+  el.classList.toggle('open');
+  chev.innerHTML = el.classList.contains('open') ? '&#9660; overrides' : '&#9654; overrides';
+}
+function resetOverride(clientName, key){
+  var inp = document.querySelector('[data-client="'+clientName+'"][data-thresh="'+key+'"]');
+  if(inp){inp.value='';inp.classList.remove('overridden');checkDirty();}
+}
+function collectConfig(){
+  var cfg = JSON.parse(JSON.stringify(_cfg));
+  var gt = cfg.global_thresholds || {};
+  document.querySelectorAll('[data-gt]').forEach(function(inp){
+    var k = inp.getAttribute('data-gt'), v = parseFloat(inp.value);
+    if(!isNaN(v)) gt[k] = v;
+  });
+  cfg.global_thresholds = gt;
+  Object.keys(cfg.clients || {}).forEach(function(name){
+    var c = cfg.clients[name];
+    ['sent','not_contacted'].forEach(function(k){
+      var inp = document.querySelector('[data-client="'+name+'"][data-kpi="'+k+'"]');
+      if(inp && inp.value !== '') c[k] = parseInt(inp.value);
+    });
+    ['opps_per_day','reply_rate'].forEach(function(k){
+      var inp = document.querySelector('[data-client="'+name+'"][data-kpi="'+k+'"]');
+      if(inp && inp.value !== '') c[k] = parseFloat(inp.value);
+    });
+    var overrides = {};
+    THRESH_KEYS.forEach(function(k){
+      var inp = document.querySelector('[data-client="'+name+'"][data-thresh="'+k+'"]');
+      if(inp && inp.value !== '') overrides[k] = parseFloat(inp.value);
+    });
+    if(Object.keys(overrides).length) c.thresholds = overrides;
+    else delete c.thresholds;
+  });
+  return cfg;
+}
+
+function checkDirty(){
+  var cur = JSON.stringify(collectConfig());
+  document.getElementById('save-btn').disabled = (cur === _origJson);
+}
+function showToast(msg, type){
+  var t = document.getElementById('toast');
+  t.className = 'toast ' + type; t.textContent = msg; t.style.display = 'inline-block';
+  setTimeout(function(){t.style.display='none';}, 3000);
+}
+
+function saveConfig(){
+  var btn = document.getElementById('save-btn');
+  btn.textContent = 'Saving...'; btn.disabled = true;
+  var cfg = collectConfig();
+  fetch('/admin/api/config', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(cfg)})
+    .then(function(r){
+      if(r.ok){ _cfg = cfg; _origJson = JSON.stringify(cfg); btn.textContent = 'Saved \u2713'; showToast('Saved successfully','ok'); setTimeout(function(){btn.textContent='Save Changes';checkDirty();},2000); }
+      else{ return r.json().then(function(e){throw new Error((e.errors||[e.error||'Save failed']).join(', '));}); }
+    })
+    .catch(function(e){ btn.textContent = 'Save Changes'; btn.disabled = false; showToast(e.message,'err'); });
+}
+
+function exportConfig(){
+  var cfg = collectConfig();
+  document.getElementById('export-txt').value = JSON.stringify(cfg, null, 2);
+  document.getElementById('export-area').style.display = 'block';
+}
+</script>
+</body>
+</html>
