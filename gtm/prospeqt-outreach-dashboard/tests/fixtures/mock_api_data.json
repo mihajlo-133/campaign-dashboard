@@ -24,7 +24,9 @@
     "campaigns": [
       {"name": "MyPlace - Q1 Outbound", "id": "camp_mp_1", "status": "active", "sent_today": 600, "first_touch": 300, "followups": 300, "replies_today": 14, "opps_today": 2, "reply_rate": 2.33, "not_contacted": 680, "in_progress": 0, "total_sent": 15000, "total_bounced": 120},
       {"name": "MyPlace - Follow-up", "id": "camp_mp_2", "status": "active", "sent_today": 700, "first_touch": 350, "followups": 350, "replies_today": 16, "opps_today": 2, "reply_rate": 2.29, "not_contacted": 770, "in_progress": 0, "total_sent": 18000, "total_bounced": 130},
-      {"name": "MyPlace - Re-engage", "id": "camp_mp_3", "status": "active", "sent_today": 500, "first_touch": 250, "followups": 250, "replies_today": 12, "opps_today": 1, "reply_rate": 2.4, "not_contacted": 410, "in_progress": 0, "total_sent": 12000, "total_bounced": 90}
+      {"name": "MyPlace - Re-engage", "id": "camp_mp_3", "status": "active", "sent_today": 500, "first_touch": 250, "followups": 250, "replies_today": 12, "opps_today": 1, "reply_rate": 2.4, "not_contacted": 410, "in_progress": 0, "total_sent": 12000, "total_bounced": 90},
+      {"name": "MyPlace - Old Q4 2025", "id": "camp_mp_4", "status": "completed", "sent_today": 0, "first_touch": 0, "followups": 0, "replies_today": 0, "opps_today": 0, "reply_rate": 0, "not_contacted": 0, "in_progress": 0, "total_sent": 8500, "total_bounced": 45},
+      {"name": "MyPlace - Paused Segment B", "id": "camp_mp_5", "status": "paused", "sent_today": 0, "first_touch": 0, "followups": 0, "replies_today": 0, "opps_today": 0, "reply_rate": 0, "not_contacted": 1200, "in_progress": 350, "total_sent": 5000, "total_bounced": 30}
     ],
     "daily": [
       {"date": "2026-03-26", "sent": 2100, "opps": 5, "replies": 45},
@@ -63,7 +65,9 @@
     "sent_trend": "down",
     "campaigns": [
       {"name": "SwishFunding - Enterprise", "id": "camp_sf_1", "status": "active", "sent_today": 3500, "first_touch": 1750, "followups": 1750, "replies_today": 28, "opps_today": 3, "reply_rate": 0.8, "not_contacted": 5400, "in_progress": 0, "total_sent": 95000, "total_bounced": 600},
-      {"name": "SwishFunding - SMB", "id": "camp_sf_2", "status": "active", "sent_today": 3000, "first_touch": 1500, "followups": 1500, "replies_today": 24, "opps_today": 3, "reply_rate": 0.8, "not_contacted": 5400, "in_progress": 0, "total_sent": 85000, "total_bounced": 600}
+      {"name": "SwishFunding - SMB", "id": "camp_sf_2", "status": "active", "sent_today": 3000, "first_touch": 1500, "followups": 1500, "replies_today": 24, "opps_today": 3, "reply_rate": 0.8, "not_contacted": 5400, "in_progress": 0, "total_sent": 85000, "total_bounced": 600},
+      {"name": "SwishFunding - Old Vertical", "id": "camp_sf_3", "status": "paused", "sent_today": 0, "first_touch": 0, "followups": 0, "replies_today": 0, "opps_today": 0, "reply_rate": 0, "not_contacted": 3200, "in_progress": 800, "total_sent": 42000, "total_bounced": 280},
+      {"name": "SwishFunding - Q4 Cleanup", "id": "camp_sf_4", "status": "completed", "sent_today": 0, "first_touch": 0, "followups": 0, "replies_today": 0, "opps_today": 0, "reply_rate": 0, "not_contacted": 0, "in_progress": 0, "total_sent": 15000, "total_bounced": 120}
     ],
     "daily": [
       {"date": "2026-03-26", "sent": 9500, "opps": 12, "replies": 100},

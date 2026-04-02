@@ -1,6 +1,10 @@
 """Tests for fetch_instantly_data and fetch_emailbison_data with monkeypatched HTTP."""
 
 import server
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
+TODAY_STR = datetime.now(ZoneInfo("America/New_York")).date().isoformat()
 
 
 class TestFetchInstantlyData:
@@ -15,9 +19,9 @@ class TestFetchInstantlyData:
 
         def mock_http_get(url, headers, timeout=15):
             if "/campaigns/analytics/daily" in url:
-                # Per-campaign daily endpoint: /campaigns/{id}/analytics/daily
+                # Per-campaign daily: ?campaign_id=X in query string
                 for camp_id, data in campaign_daily.items():
-                    if f"/{camp_id}/" in url:
+                    if f"campaign_id={camp_id}" in url:
                         return data
                 return daily
             if "/campaigns/analytics" in url:
@@ -51,10 +55,14 @@ class TestFetchInstantlyData:
             },
         ]
         daily = [
-            {"date": "2026-04-01", "sent": 100, "replies": 3, "opportunities": 1},
+            {"date": TODAY_STR, "sent": 100, "replies": 3, "opportunities": 1},
         ]
+        # Per-campaign daily data (sent_today is aggregated from these)
+        campaign_daily = {
+            "c1": [{"date": TODAY_STR, "sent": 100, "new_leads_contacted": 60, "replies": 3, "opportunities": 1}],
+        }
 
-        self._patch_http(monkeypatch, campaigns=campaigns, analytics=analytics, daily=daily)
+        self._patch_http(monkeypatch, campaigns=campaigns, analytics=analytics, daily=daily, campaign_daily=campaign_daily)
 
         result = server.fetch_instantly_data("TestClient", "fake-key")
 
@@ -164,12 +172,12 @@ class TestFetchInstantlyData:
         ]
         # Aggregate daily (used for sent_today totals)
         daily = [
-            {"date": "2026-04-01", "sent": 80, "replies": 4, "opportunities": 1},
+            {"date": TODAY_STR, "sent": 80, "replies": 4, "opportunities": 1},
         ]
         # Per-campaign daily breakdowns (first_touch = step 0, followups = steps 1+)
         campaign_daily = {
-            "c1": [{"date": "2026-04-01", "step": 0, "sent": 30}, {"date": "2026-04-01", "step": 1, "sent": 20}],
-            "c2": [{"date": "2026-04-01", "step": 0, "sent": 20}, {"date": "2026-04-01", "step": 1, "sent": 10}],
+            "c1": [{"date": TODAY_STR, "step": 0, "sent": 30}, {"date": TODAY_STR, "step": 1, "sent": 20}],
+            "c2": [{"date": TODAY_STR, "step": 0, "sent": 20}, {"date": TODAY_STR, "step": 1, "sent": 10}],
         }
 
         self._patch_http(monkeypatch, campaigns=campaigns, analytics=analytics, daily=daily, campaign_daily=campaign_daily)
@@ -252,9 +260,9 @@ class TestFetchEmailBisonData:
             {"label": "Bounced", "dates": [["2026-03-26", 1], ["2026-03-27", 0]]},
         ]
         stats_today = [
-            {"label": "Sent", "dates": [["2026-04-01", 50]]},
-            {"label": "Replied", "dates": [["2026-04-01", 2]]},
-            {"label": "Interested", "dates": [["2026-04-01", 1]]},
+            {"label": "Sent", "dates": [[TODAY_STR, 50]]},
+            {"label": "Replied", "dates": [[TODAY_STR, 2]]},
+            {"label": "Interested", "dates": [[TODAY_STR, 1]]},
         ]
 
         self._patch_http(monkeypatch, campaigns=campaigns, stats_7d=stats_7d, stats_today=stats_today, nc_total=200)
@@ -317,9 +325,9 @@ class TestFetchEmailBisonData:
             {"id": 2, "name": "EB Camp B", "status": "Active"},
         ]
         stats_today = [
-            {"label": "Sent", "dates": [["2026-04-01", 80]]},
-            {"label": "Replied", "dates": [["2026-04-01", 3]]},
-            {"label": "Interested", "dates": [["2026-04-01", 1]]},
+            {"label": "Sent", "dates": [[TODAY_STR, 80]]},
+            {"label": "Replied", "dates": [[TODAY_STR, 3]]},
+            {"label": "Interested", "dates": [[TODAY_STR, 1]]},
         ]
 
         self._patch_http(monkeypatch, campaigns=campaigns, stats_today=stats_today, nc_total=500)

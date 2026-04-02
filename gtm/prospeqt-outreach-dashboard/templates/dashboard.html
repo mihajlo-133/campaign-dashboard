@@ -101,12 +101,12 @@ td.num{text-align:right;font-family:'Space Mono',monospace;font-size:13px}
 .client-plat{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--tx3);letter-spacing:.02em;text-transform:uppercase;margin-top:1px;font-family:'Space Mono',monospace}
 .plat-logo{width:14px;height:14px;border-radius:3px;object-fit:contain;flex-shrink:0}
 .cell-val{font-family:'Space Mono',monospace}
-.cell-val.g{color:#29753c}.cell-val.a{color:#d97706}.cell-val.r{color:#C33939}.cell-val.m{color:var(--tx3)}
+.cell-val.g{color:#3dbc5e}.cell-val.a{color:#e8a020}.cell-val.r{color:#C33939}.cell-val.m{color:var(--tx3)}
 .trend{font-size:10px;margin-left:3px}
 .trend-u{color:#29753c}.trend-d{color:#C33939}.trend-f{color:var(--tx3)}
 .pill{display:inline-flex;align-items:center;height:24px;padding:0 10px;border-radius:6px;font-size:11px;font-weight:600;letter-spacing:.02em}
-.pill-g{background:rgba(52,199,89,.08);color:#29753c;border:1px solid rgba(52,199,89,.2)}
-.pill-a{background:rgba(245,158,11,.08);color:#d97706;border:1px solid rgba(245,158,11,.2)}
+.pill-g{background:rgba(52,199,89,.08);color:#3dbc5e;border:1px solid rgba(52,199,89,.2)}
+.pill-a{background:rgba(245,158,11,.08);color:#e8a020;border:1px solid rgba(245,158,11,.2)}
 .pill-r{background:rgba(195,57,57,.08);color:#C33939;border:1px solid rgba(195,57,57,.2)}
 .pill-m{background:var(--bg-el);color:var(--tx3);border:1px solid var(--bd)}
 /* Skeleton — dark-theme compatible */
@@ -134,7 +134,7 @@ tr.expand-row.visible{display:table-row}
 .exp-kpi{background:var(--bg-el);border:1px solid var(--bd);border-radius:12px;padding:16px 20px;flex:1;min-width:140px;box-shadow:var(--sh)}
 .exp-kpi-label{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--tx3);font-weight:600;margin-bottom:6px;font-family:'Space Mono',monospace}
 .exp-kpi-val{font-size:24px;font-weight:700;font-family:'Space Grotesk',sans-serif;letter-spacing:-.03em;line-height:1.1;color:var(--tx1)}
-.exp-kpi-val.g{color:#29753c}.exp-kpi-val.a{color:#d97706}.exp-kpi-val.r{color:#C33939}
+.exp-kpi-val.g{color:#3dbc5e}.exp-kpi-val.a{color:#e8a020}.exp-kpi-val.r{color:#C33939}
 .exp-kpi-sub{font-size:11px;color:var(--tx3);margin-top:6px;line-height:1.3}
 .exp-kpi-bar{height:3px;background:var(--bd);border-radius:2px;overflow:hidden;margin-top:10px}
 .exp-kpi-bar-fill{height:100%;border-radius:2px;transition:width .4s}
@@ -164,66 +164,78 @@ tr.expand-row.visible{display:table-row}
 .d-alert{padding:10px 14px;border-radius:8px;font-size:12px;line-height:1.6;margin-bottom:8px}
 .d-alert.r{background:rgba(195,57,57,.05);border:1px solid rgba(195,57,57,.15);color:#C33939}
 .d-alert.a{background:rgba(245,158,11,.05);border:1px solid rgba(245,158,11,.15);color:#d97706}
-/* Mobile card stack — replaces table below 640px */
-.card-stack{display:none}
-.card-stack .m-card{background:var(--bg-el);border:1px solid var(--bd);border-radius:12px;padding:16px;margin-bottom:12px;cursor:pointer;transition:background .12s;box-shadow:var(--sh)}
-.card-stack .m-card:active{background:var(--bg-hov)}
-.card-stack .m-card.selected{background:var(--bg-sel);border-color:var(--blue)}
-.card-stack .m-card-hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px}
-.card-stack .m-card-name{font-weight:600;font-size:15px;font-family:'Space Grotesk',sans-serif;letter-spacing:-.01em}
-.card-stack .m-card-plat{display:flex;align-items:center;gap:5px;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--tx3);font-family:'Space Mono',monospace;margin-bottom:10px}
-.card-stack .plat-logo{width:13px;height:13px;border-radius:3px}
-.card-stack .m-card-metrics{display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;border-top:1px solid var(--bd);padding-top:10px}
-.card-stack .m-metric-label{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--tx3);font-family:'Space Mono',monospace;margin-bottom:2px}
-.card-stack .m-metric-val{font-size:16px;font-weight:600;font-family:'Space Mono',monospace}
-/* Error card variant */
-.card-stack .m-card.err{background:rgba(195,57,57,.04);border-color:rgba(195,57,57,.2);border-left:3px solid var(--red);cursor:default}
-.card-stack .m-card.err .m-card-err{font-size:12px;color:var(--tx2);border-top:1px solid rgba(195,57,57,.12);padding-top:10px;margin-top:6px}
-.card-stack .m-card.err .m-card-err-msg{color:var(--red);font-weight:500;margin-bottom:2px}
-/* Mobile expand detail in card */
-.card-stack .m-card-detail{display:none;border-top:1px solid var(--bd);margin-top:12px;padding-top:12px}
-.card-stack .m-card.expanded .m-card-detail{display:block}
-.card-stack .m-card-detail .exp-kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.card-stack .m-card-detail .exp-kpi{min-width:auto}
-/* Campaign table → fully flattened on mobile (no grid-on-tr, pure block) */
-.card-stack .m-card-detail .camp-table,
-.card-stack .m-card-detail .camp-table thead,
-.card-stack .m-card-detail .camp-table tbody,
-.card-stack .m-card-detail .camp-table tr,
-.card-stack .m-card-detail .camp-table th,
-.card-stack .m-card-detail .camp-table td{display:block;width:100%;border:none;padding:0;height:auto;background:transparent;box-shadow:none}
-.card-stack .m-card-detail .camp-table thead{display:none}
-.card-stack .m-card-detail .camp-table{font-size:12px;min-width:0;overflow:visible}
-/* Each campaign row becomes a mini-card */
-.card-stack .m-card-detail .camp-table tbody tr:not(.camp-group-hdr):not(.camp-group-row){padding:12px;margin-bottom:8px;border:1px solid var(--bd);border-radius:8px;background:var(--bg-hov)}
-.card-stack .m-card-detail .camp-table tbody tr:not(.camp-group-hdr):not(.camp-group-row) td{white-space:normal;text-align:left;font-size:12px;padding:2px 0}
-.card-stack .m-card-detail .camp-table tbody tr:not(.camp-group-hdr):not(.camp-group-row) td[data-label]::before{content:attr(data-label) ": ";font-size:10px;color:var(--tx3);font-family:'Space Mono',monospace;font-weight:400}
-.card-stack .m-card-detail .camp-table tbody tr:not(.camp-group-hdr):not(.camp-group-row) td:first-child{font-size:13px;font-weight:600;padding-bottom:6px;border-bottom:1px solid var(--bd);margin-bottom:6px}
-.card-stack .m-card-detail .camp-table tbody tr:not(.camp-group-hdr):not(.camp-group-row) td:first-child::before{display:none}
-.card-stack .m-card-detail .camp-table tbody tr:not(.camp-group-hdr):not(.camp-group-row) td.num{text-align:left}
-.card-stack .m-card-detail .camp-name{white-space:normal;word-break:break-word;font-size:12px}
-/* Campaign group rows (paused/other) — hidden by default, mini-card when visible */
-.card-stack .m-card-detail .camp-group-row{display:none!important}
-.card-stack .m-card-detail .camp-group-row.visible{display:block!important;padding:12px;margin-bottom:8px;border:1px solid var(--bd);border-radius:8px;background:var(--bg-hov)}
-.card-stack .m-card-detail .camp-group-row.visible td{white-space:normal;text-align:left;font-size:12px;padding:2px 0}
-.card-stack .m-card-detail .camp-group-row.visible td[data-label]::before{content:attr(data-label) ": ";font-size:10px;color:var(--tx3);font-family:'Space Mono',monospace;font-weight:400}
-.card-stack .m-card-detail .camp-group-row.visible td:first-child{font-size:13px;font-weight:600;padding-bottom:6px;border-bottom:1px solid var(--bd);margin-bottom:6px}
-.card-stack .m-card-detail .camp-group-row.visible td:first-child::before{display:none}
-.card-stack .m-card-detail .camp-group-row.visible td.num{text-align:left}
-/* Campaign group headers */
-.card-stack .m-card-detail .camp-group-hdr{padding:10px 0!important;border-bottom:1px solid var(--bd);margin-top:4px}
-.card-stack .m-card-detail .camp-group-hdr td{padding:0!important;height:auto}
-.card-stack .m-card-detail .camp-group-hdr.open .camp-chev{transform:rotate(90deg)}
-@media(max-width:768px){.shell{padding:0 16px 24px}.exp-kpis{flex-direction:column}}
+/* ── OLD MOBILE card-stack (hidden — replaced by card grid) ── */
+.card-stack{display:none!important}
+/* ── CARD GRID ── */
+.sort-bar{display:flex;align-items:center;gap:10px;padding:16px 0 12px;font-size:12px;color:var(--tx3);font-family:'Space Mono',monospace}
+.sort-bar select{background:var(--bg-el);color:var(--tx1);border:1px solid var(--bd);border-radius:8px;padding:6px 10px;font-size:12px;font-family:'Inter',sans-serif;cursor:pointer;outline:none;transition:border-color .15s}
+.sort-bar select:focus{border-color:var(--blue)}
+.card-grid{display:grid;grid-template-columns:1fr;gap:12px;padding-bottom:32px}
+@media(min-width:1100px){.card-grid{grid-template-columns:repeat(2,1fr)}}
+/* Error cards */
+.g-card-err{background:rgba(195,57,57,.04);border:1px solid rgba(195,57,57,.2);border-radius:12px;padding:20px;box-shadow:inset 4px 0 0 var(--red),var(--sh);cursor:default}
+.g-card-err-name{font-weight:600;font-size:14px;font-family:'Space Grotesk',sans-serif;color:var(--tx3);margin-bottom:4px}
+.g-card-err-msg{font-size:12px;color:var(--red);margin-top:8px;padding-top:8px;border-top:1px solid rgba(195,57,57,.12)}
+/* Normal cards */
+.g-card{background:var(--bg-el);border:1px solid var(--bd);border-radius:12px;box-shadow:var(--sh);cursor:pointer;transition:background .12s,border-color .15s;overflow:hidden}
+.g-card:hover{background:var(--bg-hov)}
+.g-card.selected{border-color:var(--blue)}
+.g-card.g-red{box-shadow:inset 6px 0 0 var(--red),var(--sh)}
+.g-card.g-amber{box-shadow:inset 6px 0 0 var(--amber),var(--sh)}
+.g-card.g-green{box-shadow:inset 6px 0 0 var(--green),var(--sh)}
+.g-card.g-red .g-card-upper{background:rgba(195,57,57,.04)}
+.g-card.g-amber .g-card-upper{background:rgba(245,158,11,.04)}
+.g-card.g-green .g-card-upper{background:rgba(52,199,89,.03)}
+/* Upper row */
+.g-card-upper{display:flex;gap:0;padding:20px 20px 16px}
+.g-card-left{flex:1;min-width:0;padding-right:20px;border-right:1px solid var(--bd)}
+.g-card-mid{flex:1;padding:0 20px;border-right:1px solid var(--bd)}
+.g-card-right{flex:0 0 auto;padding-left:20px;min-width:130px}
+.g-card-client-name{font-weight:700;font-size:16px;font-family:'Space Grotesk',sans-serif;letter-spacing:-.02em;color:var(--tx1);margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.g-card-plat{display:flex;align-items:center;gap:4px;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--tx3);font-family:'Space Mono',monospace;margin-bottom:10px}
+.g-kpi-label{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--tx3);font-weight:600;font-family:'Space Mono',monospace;margin-bottom:6px}
+.g-hero{font-size:28px;font-weight:700;font-family:'Space Grotesk',sans-serif;letter-spacing:-.03em;line-height:1;margin-bottom:6px}
+.g-hero.sm{font-size:24px}
+.g-sub{font-size:12px;color:var(--tx3);line-height:1.4}
+.g-pct-up{color:var(--green);font-size:11px;font-weight:600;font-family:'Space Mono',monospace}
+.g-pct-dn{color:var(--red);font-size:11px;font-weight:600;font-family:'Space Mono',monospace}
+.g-pct-flat{color:var(--tx3);font-size:11px;font-family:'Space Mono',monospace}
+/* Lower row */
+.g-card-lower{display:grid;grid-template-columns:repeat(2,1fr);border-top:1px solid var(--bd)}
+.g-lower-cell{padding:14px 16px;border-right:1px solid var(--bd)}
+.g-lower-cell:last-child{border-right:none}
+.g-lower-label{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--tx3);font-weight:600;font-family:'Space Mono',monospace;margin-bottom:5px}
+.g-lower-val{font-size:15px;font-weight:700;font-family:'Space Grotesk',sans-serif;letter-spacing:-.02em;color:var(--tx1);margin-bottom:3px}
+.g-lower-sub{font-size:11px;color:var(--tx3);font-family:'Space Mono',monospace}
+/* Expand area */
+.g-card-expand{display:none;grid-column:1/-1;background:var(--bg-el);border:1px solid var(--blue);border-radius:12px;overflow:hidden;box-shadow:var(--sh-md)}
+.g-card-expand.open{display:block}
+.g-expand-inner{padding:24px 28px 28px}
+/* Skeleton cards */
+.g-card-skel{background:var(--bg-el);border:1px solid var(--bd);border-radius:12px;padding:20px;box-shadow:var(--sh);min-height:160px}
+/* Light-theme overrides for new card grid */
+html[data-theme="light"] .g-card-err{background:rgba(195,57,57,.02)}
+html[data-theme="light"] .g-red{box-shadow:inset 4px 0 0 #c33939,var(--sh)}
+html[data-theme="light"] .g-amber{box-shadow:inset 4px 0 0 #b87a00,var(--sh)}
+html[data-theme="light"] .g-green{box-shadow:inset 4px 0 0 #1a8a3e,var(--sh)}
+/* Responsive */
+@media(max-width:768px){
+  .shell{padding:0 16px 24px}
+  .card-grid{max-width:100%;gap:8px}
+  .exp-kpis{flex-direction:column}
+}
 @media(max-width:640px){
   .tbl-wrap{display:none}
-  .card-stack{display:block}
   .chips{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px;scrollbar-width:none}
   .chips::-webkit-scrollbar{display:none}
   .chips-wrap{position:relative}
   .chips-wrap::after{content:'';position:absolute;right:0;top:0;bottom:0;width:24px;background:linear-gradient(to right,transparent,var(--bg));pointer-events:none}
   .topbar{height:auto;padding:12px 4px;flex-wrap:wrap;gap:8px}
   .topbar-mid{font-size:11px;order:3;width:100%;text-align:center}
+  .g-card-upper{flex-direction:column;gap:16px}
+  .g-card-left,.g-card-mid{border-right:none;border-bottom:1px solid var(--bd);padding-right:0;padding-bottom:12px;margin-bottom:4px}
+  .g-card-right{padding-left:0;min-width:0}
+  .g-hero{font-size:22px}
 }
 </style>
 </head>
@@ -248,34 +260,46 @@ tr.expand-row.visible{display:table-row}
     <span class="chip skel" style="width:90px;height:30px"></span>
   </div>
 </div>
-<div class="tbl-wrap">
+<div class="tbl-wrap" style="display:none">
   <div class="tbl-scroll">
     <table id="main-table">
       <thead>
         <tr>
           <th data-col="name">Client</th>
-          <th class="num" data-col="sent_today" data-tip="Emails sent today (Eastern time)">Sent</th>
-          <th class="num col-sm-hide" data-col="first_touch_today" data-tip="First-touch emails sent today">1st Touch</th>
-          <th class="num col-sm-hide" data-col="followup_today" data-tip="Follow-up emails sent today">Follow-ups</th>
-          <th class="num" data-col="reply_rate_today" data-tip="Reply rate today (active campaigns)">Reply Rate</th>
-          <th class="num col-sm-hide" data-col="replies_today" data-tip="Replies received today">Replied</th>
-          <th class="num col-sm-hide" data-col="opps_today" data-tip="Opportunities today">Opps</th>
-          <th class="num col-sm-hide" data-col="bounce_rate" data-tip="Bounce rate (active campaigns)">Bounce Rate</th>
-          <th class="num col-sm-hide" data-col="not_contacted" data-tip="Leads not yet contacted">Not Contacted</th>
-          <th class="num col-sm-hide" data-col="in_progress" data-tip="Leads contacted but not completed sequence">In Progress</th>
-          <th data-col="status" data-tip="Overall health based on KPI thresholds">Status</th>
+          <th class="num" data-col="sent_today">Sent</th>
+          <th class="num" data-col="first_touch_today">1st Touch</th>
+          <th class="num" data-col="followup_today">Follow-ups</th>
+          <th class="num" data-col="reply_rate_today">Reply Rate</th>
+          <th class="num" data-col="replies_today">Replied</th>
+          <th class="num" data-col="opps_today">Opps</th>
+          <th class="num" data-col="bounce_rate">Bounce Rate</th>
+          <th class="num" data-col="not_contacted">Not Contacted</th>
+          <th class="num" data-col="in_progress">In Progress</th>
+          <th data-col="status">Status</th>
           <th style="width:32px"></th>
         </tr>
       </thead>
-      <tbody id="tbl-body">
-        <tr><td colspan="12"><span class="skel" style="width:55%;height:14px;display:block;margin:14px 16px"></span></td></tr>
-        <tr><td colspan="12"><span class="skel" style="width:75%;height:14px;display:block;margin:14px 16px"></span></td></tr>
-        <tr><td colspan="12"><span class="skel" style="width:45%;height:14px;display:block;margin:14px 16px"></span></td></tr>
-      </tbody>
+      <tbody id="tbl-body"></tbody>
     </table>
   </div>
 </div>
 <div class="card-stack" id="card-stack"></div>
+<div class="sort-bar">
+  Sort by:&nbsp;
+  <select id="sort-select" onchange="onSortChange(this.value)">
+    <option value="status">Status</option>
+    <option value="sent_today">Sent Today</option>
+    <option value="reply_rate_today">Reply Rate</option>
+    <option value="not_contacted">Not Contacted</option>
+    <option value="name">Name</option>
+  </select>
+</div>
+<div class="card-grid" id="card-grid">
+  <div class="g-card-skel"><span class="skel" style="width:60%;height:14px;display:block;margin-bottom:12px"></span><span class="skel" style="width:40%;height:28px;display:block"></span></div>
+  <div class="g-card-skel"><span class="skel" style="width:55%;height:14px;display:block;margin-bottom:12px"></span><span class="skel" style="width:35%;height:28px;display:block"></span></div>
+  <div class="g-card-skel"><span class="skel" style="width:65%;height:14px;display:block;margin-bottom:12px"></span><span class="skel" style="width:45%;height:28px;display:block"></span></div>
+  <div class="g-card-skel"><span class="skel" style="width:50%;height:14px;display:block;margin-bottom:12px"></span><span class="skel" style="width:40%;height:28px;display:block"></span></div>
+</div>
 </div>
 <script>
 var REFRESH_MS = REFRESH_INTERVAL_MS;
@@ -389,15 +413,17 @@ function renderChips(data){
   });
   var avgRR=rrN>0?(rrSum/rrN):0;
   var h='';
-  h+='<span class="chip c-blue"><strong>'+fmt(totalSent)+'</strong>&nbsp;sent today</span>';
-  h+='<span class="chip"><strong>'+fmt(totalFirstTouch)+'</strong>&nbsp;1st touch</span>';
-  h+='<span class="chip"><strong>'+fmt(totalFollowups)+'</strong>&nbsp;follow-ups</span>';
-  h+='<span class="chip c-blue"><strong>'+fmt(totalOpps)+'</strong>&nbsp;opps</span>';
-  h+='<span class="chip">Reply rate&nbsp;<strong>'+fmtPct(avgRR)+'</strong></span>';
+  // Health status first (CEO scans these)
   if(counts.red)   h+='<span class="chip c-red"><span class="dot dot-red"></span><strong>'+counts.red+'</strong>&nbsp;action needed</span>';
   if(counts.amber) h+='<span class="chip c-amber"><span class="dot dot-amber"></span><strong>'+counts.amber+'</strong>&nbsp;watch</span>';
   if(counts.green) h+='<span class="chip c-green"><span class="dot dot-green"></span><strong>'+counts.green+'</strong>&nbsp;on track</span>';
   if(counts.error) h+='<span class="chip"><span class="dot dot-muted"></span><strong>'+counts.error+'</strong>&nbsp;errors</span>';
+  // Divider
+  h+='<span style="width:1px;height:20px;background:var(--bd);align-self:center;flex-shrink:0"></span>';
+  // Operational metrics
+  h+='<span class="chip c-blue"><strong>'+fmt(totalSent)+'</strong>&nbsp;sent today</span>';
+  h+='<span class="chip c-blue"><strong>'+fmt(totalOpps)+'</strong>&nbsp;opps</span>';
+  h+='<span class="chip">Reply rate&nbsp;<strong>'+fmtPct(avgRR)+'</strong></span>';
   document.getElementById('chips').innerHTML=h;
 }
 var _campGroupId=0;
@@ -426,21 +452,29 @@ function buildCampaignTable(campaigns){
   var bySent=function(a,b){return (b.sent_today||0)-(a.sent_today||0)};
   var active=campaigns.filter(function(c){return c.status==='active'}).sort(bySent);
   var paused=campaigns.filter(function(c){return c.status==='paused'||c.status==='stopped'}).sort(bySent);
-  var other=campaigns.filter(function(c){return c.status!=='active'&&c.status!=='paused'&&c.status!=='stopped'}).sort(bySent);
+  var completed=campaigns.filter(function(c){return c.status==='completed'}).sort(bySent);
+  var other=campaigns.filter(function(c){return c.status!=='active'&&c.status!=='paused'&&c.status!=='stopped'&&c.status!=='completed'}).sort(bySent);
   var h='<table class="camp-table">';
   h+='<thead><tr><th>Campaign</th><th>Status</th><th class="num">Sent</th><th class="num">1st Touch</th><th class="num">Follow-ups</th><th class="num">Replied</th><th class="num">Opps</th><th class="num">Reply Rate</th><th class="num">Not Contacted</th><th class="num">In Progress</th></tr></thead>';
   h+='<tbody>';
   // Active campaigns: always visible
   if(active.length===0){h+='<tr><td colspan="10" style="font-size:12px;color:var(--tx3);padding:12px">No active campaigns</td></tr>';}
   active.forEach(function(c){h+=buildCampaignRow(c)});
-  // Paused: collapsed group
+  // Paused: visible by default (GTM engineers need to see these)
   if(paused.length){
     var gid='cg'+(_campGroupId++);
-    h+='<tr class="camp-group-hdr" onclick="toggleCampGroup(this,\''+gid+'\',event)">';
+    h+='<tr class="camp-group-hdr open" onclick="toggleCampGroup(this,\''+gid+'\',event)">';
     h+='<td colspan="10"><span class="camp-chev">&#9658;</span>Paused<span class="camp-group-count">('+paused.length+')</span></td></tr>';
-    paused.forEach(function(c){h+='<tr class="camp-group-row" data-group="'+gid+'">'+buildCampaignRow(c).replace(/^<tr>/,'').replace(/<\/tr>$/,'')+'</tr>'});
+    paused.forEach(function(c){h+='<tr class="camp-group-row visible" data-group="'+gid+'">'+buildCampaignRow(c).replace(/^<tr>/,'').replace(/<\/tr>$/,'')+'</tr>'});
   }
-  // Other (completed, unknown, etc.): collapsed group
+  // Completed: collapsed by default but visible as group
+  if(completed.length){
+    var gid3='cg'+(_campGroupId++);
+    h+='<tr class="camp-group-hdr" onclick="toggleCampGroup(this,\''+gid3+'\',event)">';
+    h+='<td colspan="10"><span class="camp-chev">&#9658;</span>Completed<span class="camp-group-count">('+completed.length+')</span></td></tr>';
+    completed.forEach(function(c){h+='<tr class="camp-group-row" data-group="'+gid3+'">'+buildCampaignRow(c).replace(/^<tr>/,'').replace(/<\/tr>$/,'')+'</tr>'});
+  }
+  // Other (unknown status): collapsed
   if(other.length){
     var gid2='cg'+(_campGroupId++);
     h+='<tr class="camp-group-hdr" onclick="toggleCampGroup(this,\''+gid2+'\',event)">';
@@ -481,58 +515,20 @@ function buildAlerts(name,d){
 function buildExpandContent(name,d){
   var kpi=d.kpi||{},t=d.thresholds||{},h='';
   if(d.error){return '<div class="d-alert r">'+d.error+'</div>';}
-  // Row 1: KPI metric cards
-  h+='<div class="exp-kpis">';
-  // 1. Sent Today
-  var sc=sentCls(d.sent_today||0,kpi.sent),sentPct=kpi.sent>0?Math.min(100,Math.round(((d.sent_today||0)/kpi.sent)*100)):null;
-  h+='<div class="exp-kpi"><div class="exp-kpi-label">Sent Today</div><div class="exp-kpi-val '+sc+'">'+fmt(d.sent_today)+'</div>';
-  h+='<div class="exp-kpi-sub">KPI: '+fmt(kpi.sent||0)+(sentPct!=null?' &middot; '+sentPct+'%':'')+'</div>';
-  if(sentPct!=null)h+='<div class="exp-kpi-bar"><div class="exp-kpi-bar-fill '+sc+'" style="width:'+sentPct+'%"></div></div>';
-  h+='</div>';
-  // 2. First Touch / Follow-ups split card
-  var ftVal=d.first_touch_today!=null?fmt(d.first_touch_today):'--';
-  var fuVal=d.followup_today!=null?fmt(d.followup_today):'--';
-  var totalSteps=(d.first_touch_today||0)+(d.followup_today||0);
-  var ftPct2=totalSteps>0?Math.round(((d.first_touch_today||0)/totalSteps)*100):50;
-  var fuPct2=totalSteps>0?(100-ftPct2):50;
-  h+='<div class="exp-kpi" style="flex:1.5;min-width:180px"><div class="exp-kpi-label">1st Touch / Follow-ups</div>';
-  h+='<div style="display:flex;gap:16px;align-items:flex-start;margin-bottom:8px">';
-  h+='<div><div class="exp-kpi-val" style="font-size:22px">'+ftVal+'</div><div class="exp-kpi-sub">1st touch</div></div>';
-  h+='<div style="font-size:18px;color:var(--tx3);padding-top:4px">/</div>';
-  h+='<div><div class="exp-kpi-val" style="font-size:22px">'+fuVal+'</div><div class="exp-kpi-sub">follow-ups</div></div>';
-  h+='</div>';
-  if(totalSteps>0){
-    h+='<div style="height:4px;border-radius:2px;overflow:hidden;display:flex;background:var(--bd)">';
-    h+='<div style="width:'+ftPct2+'%;background:#2756f7;transition:width .3s"></div>';
-    h+='<div style="flex:1;background:#7C9EFA"></div>';
-    h+='</div>';
-    h+='<div style="display:flex;justify-content:space-between;margin-top:5px;font-size:10px;color:var(--tx3);font-family:\'Space Mono\',monospace">';
-    h+='<span>'+ftPct2+'% 1st touch</span><span>'+fuPct2+'% follow-up</span>';
+  // 1. Alerts first (urgent info at top)
+  var alerts=buildAlerts(name,d);
+  if(alerts.length){
+    h+='<div style="margin-bottom:16px">';
+    alerts.forEach(function(a){h+='<div class="d-alert '+a.cls+'">'+a.msg+'</div>';});
     h+='</div>';
   }
-  h+='</div>';
-  // 3. Reply Rate
-  var rc=rrCls(d.reply_rate_today||0,t),rrPct=kpi.reply_rate>0?Math.min(200,Math.round(((d.reply_rate_today||0)/kpi.reply_rate)*100)):null;
-  h+='<div class="exp-kpi"><div class="exp-kpi-label">Reply Rate</div><div class="exp-kpi-val '+rc+'">'+(d.sent_today>0?fmtPct(d.reply_rate_today):'--')+'</div>';
-  h+='<div class="exp-kpi-sub">Target: '+fmtPct(kpi.reply_rate||0)+(rrPct!=null?' &middot; '+rrPct+'%':'')+'</div>';
-  if(rrPct!=null)h+='<div class="exp-kpi-bar"><div class="exp-kpi-bar-fill '+rc+'" style="width:'+Math.min(100,rrPct)+'%"></div></div>';
-  h+='</div>';
-  // 4. Replies
-  h+='<div class="exp-kpi"><div class="exp-kpi-label">Replies</div>';
-  h+='<div class="exp-kpi-val" style="'+(d.replies_today>0?'color:#29753c':'')+'">'+fmt(d.replies_today)+'</div>';
-  h+='<div class="exp-kpi-sub">7d avg: '+fmtDec(d.avg_replies_7d,1)+'</div></div>';
-  // 5. Opportunities
-  var oc=oppsCls(d.opps_today||0,d.avg_opps_7d||0,t);
-  h+='<div class="exp-kpi"><div class="exp-kpi-label">Opportunities</div><div class="exp-kpi-val '+oc+'">'+fmt(d.opps_today)+'</div>';
-  h+='<div class="exp-kpi-sub">Target: '+fmtDec(kpi.opps_per_day||0,1)+'/day &middot; 7d avg: '+fmtDec(d.avg_opps_7d,1)+'</div></div>';
-  // 6. Bounce Rate
-  var bc=bounceCls(d.bounce_rate||0,t);
-  var brWarnDisp=t.bounce_rate_warn!=null?t.bounce_rate_warn:3;
-  var brRedDisp=t.bounce_rate_red!=null?t.bounce_rate_red:5;
-  h+='<div class="exp-kpi"><div class="exp-kpi-label">Bounce Rate</div><div class="exp-kpi-val '+bc+'">'+fmtPct(d.bounce_rate)+'</div>';
-  h+='<div class="exp-kpi-sub">Active campaigns &middot; Warn &gt;'+brWarnDisp+'% &middot; Red &gt;'+brRedDisp+'%</div></div>';
-  h+='</div>';
-  // Row 2: Pipeline
+  // 2. Campaigns sub-table (primary content for GTM engineer)
+  if(d.campaigns&&d.campaigns.length>0){
+    h+='<div style="margin-bottom:20px"><div class="exp-section-label">Campaigns &mdash; '+(d.active_campaigns||0)+' active / '+(d.total_campaigns||0)+' total</div>';
+    h+=buildCampaignTable(d.campaigns);
+    h+='</div>';
+  }
+  // 3. Pipeline KPIs
   h+='<div class="exp-kpis">';
   var ncR=ncCls(d.not_contacted||0,d.sent_today||0,d.avg_sent_7d||0,t);
   var rate2=(d.sent_today>0?d.sent_today:(d.avg_sent_7d||0)),poolD2=rate2>0?(d.not_contacted||0)/rate2:null;
@@ -544,19 +540,31 @@ function buildExpandContent(name,d){
   h+='<div class="exp-kpi"><div class="exp-kpi-label">In Progress</div><div class="exp-kpi-val" style="color:var(--blue)">'+ipExp+'</div>';
   h+='<div class="exp-kpi-sub">contacted, not completed</div></div>';
   h+='</div>';
-  // Row 2: Campaigns sub-table
-  if(d.campaigns&&d.campaigns.length>0){
-    h+='<div style="margin-bottom:20px"><div class="exp-section-label">Active Campaigns &mdash; '+(d.active_campaigns||0)+' running</div>';
-    h+=buildCampaignTable(d.campaigns);
-    h+='</div>';
-  }
-  // Alerts
-  var alerts=buildAlerts(name,d);
-  if(alerts.length){
-    h+='<div style="margin-top:16px">';
-    alerts.forEach(function(a){h+='<div class="d-alert '+a.cls+'">'+a.msg+'</div>';});
-    h+='</div>';
-  }
+  // 4. Daily detail KPI cards (secondary — card summary already shows these)
+  var sc=sentCls(d.sent_today||0,kpi.sent),sentPct=kpi.sent>0?Math.min(100,Math.round(((d.sent_today||0)/kpi.sent)*100)):null;
+  var rc=rrCls(d.reply_rate_today||0,t),rrPct=kpi.reply_rate>0?Math.min(200,Math.round(((d.reply_rate_today||0)/kpi.reply_rate)*100)):null;
+  var oc=oppsCls(d.opps_today||0,d.avg_opps_7d||0,t);
+  var bc=bounceCls(d.bounce_rate||0,t);
+  h+='<div class="exp-kpis">';
+  h+='<div class="exp-kpi"><div class="exp-kpi-label">Sent Today</div><div class="exp-kpi-val '+sc+'">'+fmt(d.sent_today)+'</div>';
+  h+='<div class="exp-kpi-sub">KPI: '+fmt(kpi.sent||0)+(sentPct!=null?' &middot; '+sentPct+'%':'')+'</div>';
+  if(sentPct!=null)h+='<div class="exp-kpi-bar"><div class="exp-kpi-bar-fill '+sc+'" style="width:'+sentPct+'%"></div></div>';
+  h+='</div>';
+  // 1st Touch / Follow-ups
+  var ftVal=d.first_touch_today!=null?fmt(d.first_touch_today):'--';
+  var fuVal=d.followup_today!=null?fmt(d.followup_today):'--';
+  h+='<div class="exp-kpi"><div class="exp-kpi-label">1st Touch / Follow-ups</div>';
+  h+='<div class="exp-kpi-val" style="font-size:20px">'+ftVal+' <span style="color:var(--tx3);font-size:16px">/</span> '+fuVal+'</div>';
+  h+='</div>';
+  h+='<div class="exp-kpi"><div class="exp-kpi-label">Reply Rate</div><div class="exp-kpi-val '+rc+'">'+(d.sent_today>0?fmtPct(d.reply_rate_today):'--')+'</div>';
+  h+='<div class="exp-kpi-sub">Target: '+fmtPct(kpi.reply_rate||0)+'</div></div>';
+  h+='<div class="exp-kpi"><div class="exp-kpi-label">Replied / Opps</div>';
+  h+='<div class="exp-kpi-val" style="'+(d.replies_today>0?'color:#29753c':'')+'">'+fmt(d.replies_today)+' <span style="color:var(--tx3);font-size:16px">/</span> '+fmt(d.opps_today)+'</div>';
+  h+='<div class="exp-kpi-sub">7d avg: '+fmtDec(d.avg_replies_7d,1)+' / '+fmtDec(d.avg_opps_7d,1)+'</div></div>';
+  var brWarnDisp=t.bounce_rate_warn!=null?t.bounce_rate_warn:3;
+  h+='<div class="exp-kpi"><div class="exp-kpi-label">Bounce Rate</div><div class="exp-kpi-val '+bc+'">'+fmtPct(d.bounce_rate)+'</div>';
+  h+='<div class="exp-kpi-sub">Warn &gt;'+brWarnDisp+'%</div></div>';
+  h+='</div>';
   return h;
 }
 function toggleRow(tr,name){
@@ -666,9 +674,183 @@ function toggleCard(card,name){
     card.querySelector('.m-card-detail').innerHTML=buildExpandContent(name,_allData[name]);
   }
 }
+// ── % change helper ──
+function pctChange(today,avg7d){
+  if(avg7d==null||avg7d===0)return today>0?'<span class="g-pct-up">+\u221e</span>':'<span class="g-pct-flat">--</span>';
+  var pct=Math.round((today-avg7d)/avg7d*100);
+  if(pct>=0)return '<span class="g-pct-up">+'+pct+'%</span>';
+  return '<span class="g-pct-dn">'+pct+'%</span>';
+}
+// ── Status dot color ──
+function statusColorCls(s){return s==='red'?'g-red':s==='amber'?'g-amber':'g-green'}
+// ── Sort control ──
+function onSortChange(val){_sortCol=val;_sortDir=1;renderCardGrid(_allData)}
+// ── Card Grid ──
+function renderCardGrid(data){
+  var keys=sortedKeys(data);
+  var grid=document.getElementById('card-grid');
+  if(!grid)return;
+  // Remove existing expand divs
+  var existingExpands=grid.querySelectorAll('.g-card-expand');
+  existingExpands.forEach(function(e){e.remove()});
+  var html='';
+  keys.forEach(function(name){
+    var d=data[name],s=clientStatus(d),kpi=d.kpi||{},t=d.thresholds||{};
+    var isExp=_expanded===name;
+    // ERROR CARD
+    if(d.error){
+      html+='<div class="g-card-err" data-name="'+name+'">';
+      html+='<div class="g-card-err-name" style="display:flex;align-items:center;justify-content:space-between"><span>'+name+'</span>'+pill('error')+'</div>';
+      html+='<div class="g-card-plat">'+platLabel(d.platform)+'</div>';
+      html+='<div class="g-card-err-msg">'+d.error+'</div>';
+      html+='</div>';
+      return;
+    }
+    var sc=sentCls(d.sent_today||0,kpi.sent);
+    var rc=rrCls(d.reply_rate_today||0,t);
+    var bc=bounceCls(d.bounce_rate||0,t);
+    var oc=oppsCls(d.opps_today||0,d.avg_opps_7d||0,t);
+    var ncC=ncCls(d.not_contacted||0,d.sent_today||0,d.avg_sent_7d||0,t);
+    var statusCls=statusColorCls(s);
+    var sentPctHtml=pctChange(d.sent_today||0,d.avg_sent_7d||0);
+    // Pool days runway
+    var rateV=(d.sent_today>0?d.sent_today:(d.avg_sent_7d||0));
+    var poolD=rateV>0?(d.not_contacted||0)/rateV:null;
+    var runwayLabel=poolD==null?'-- runway':poolD>99?'>99d runway':fmtDec(poolD,1)+'d runway';
+    // Reply rate display
+    var rrDisp=(d.sent_today||0)===0?'--':fmtPct(d.reply_rate_today);
+    var rrCls2=(d.sent_today||0)===0?'':' style="color:var(--'+rc+'-color,var(--tx1))"';
+    var ipVal=d.in_progress!=null?fmt(d.in_progress):'--';
+    html+='<div class="g-card '+statusCls+(isExp?' selected':'')+'" data-name="'+name+'" onclick="toggleCardGrid(this,\''+name+'\')">';
+    // ── UPPER ROW ──
+    html+='<div class="g-card-upper" style="position:relative">';
+    html+='<span class="g-card-chev" style="position:absolute;top:18px;right:14px;font-size:11px;color:var(--tx3);transition:transform .2s;'+(isExp?'transform:rotate(90deg)':'')+'">&#9658;</span>';
+    // Left: name + platform + pill
+    html+='<div class="g-card-left">';
+    html+='<div class="g-card-client-name">'+name+'</div>';
+    html+='<div class="g-card-plat">'+platLabel(d.platform)+'</div>';
+    html+=pill(s);
+    // Campaign status breakdown — visible at card level
+    var camps=d.campaigns||[];
+    var cActive=camps.filter(function(c){return c.status==='active'}).length;
+    var cPaused=camps.filter(function(c){return c.status==='paused'||c.status==='stopped'}).length;
+    var cCompleted=camps.filter(function(c){return c.status==='completed'||c.status==='100%'}).length;
+    var cOther=camps.length-cActive-cPaused-cCompleted;
+    var campParts=[];
+    if(cActive)campParts.push('<span style="color:var(--green)">'+cActive+' active</span>');
+    if(cPaused)campParts.push('<span style="color:var(--amber)">'+cPaused+' paused</span>');
+    if(cCompleted)campParts.push('<span style="color:var(--tx3)">'+cCompleted+' completed</span>');
+    if(cOther)campParts.push('<span style="color:var(--tx3)">'+cOther+' other</span>');
+    if(campParts.length)html+='<div style="margin-top:8px;font-size:11px;font-family:\'Space Mono\',monospace;line-height:1.5">'+campParts.join(' &middot; ')+'</div>';
+    html+='</div>';
+    // Mid: Sent Today hero
+    html+='<div class="g-card-mid">';
+    html+='<div class="g-kpi-label">Sent Today</div>';
+    html+='<div class="g-hero cell-val '+sc+'">'+fmt(d.sent_today)+'</div>';
+    html+='<div class="g-sub">';
+    html+='1st Touch: <strong>'+fmt(d.first_touch_today)+'</strong>&nbsp;&nbsp;';
+    html+='Follow-ups: <strong>'+fmt(d.followup_today)+'</strong>';
+    html+='</div>';
+    html+='<div style="margin-top:5px">vs 7d avg:&nbsp;'+sentPctHtml+'</div>';
+    html+='</div>';
+    // Right: Not Contacted
+    html+='<div class="g-card-right">';
+    html+='<div class="g-kpi-label">Not Contacted</div>';
+    html+='<div class="g-hero sm cell-val '+ncC+'">'+fmt(d.not_contacted)+'</div>';
+    html+='<div class="g-sub">'+runwayLabel+'</div>';
+    html+='</div>';
+    html+='</div>'; // end upper
+    // ── LOWER ROW ──
+    html+='<div class="g-card-lower">';
+    // 1. Reply Rate
+    var rrLow=(d.sent_today||0)===0?'m':rc;
+    html+='<div class="g-lower-cell">';
+    html+='<div class="g-lower-label">Reply Rate</div>';
+    html+='<div class="g-lower-val cell-val '+rrLow+'">'+rrDisp+'</div>';
+    html+='<div class="g-lower-sub">'+trend(d.reply_trend)+'&nbsp;7d avg: '+fmtPct(d.reply_rate_7d||0)+' &middot; '+fmt(d.replies_today)+' replied &middot; '+fmt(d.opps_today)+' opps</div>';
+    html+='</div>';
+    // 2. Bounce Rate
+    html+='<div class="g-lower-cell">';
+    html+='<div class="g-lower-label">Bounce Rate</div>';
+    html+='<div class="g-lower-val cell-val '+bc+'">'+fmtPct(d.bounce_rate)+'</div>';
+    html+='<div class="g-lower-sub"><span class="dot dot-'+(bc==='r'?'red':bc==='a'?'amber':'green')+'"></span>&nbsp;'+(bc==='r'?'Critical':bc==='a'?'Elevated':'Normal')+' &middot; '+ipVal+' in progress</div>';
+    html+='</div>';
+    html+='</div>'; // end lower
+    html+='</div>'; // end .g-card
+  });
+  grid.innerHTML=html;
+  // Re-render any open expand (if re-sorting while expanded)
+  if(_expanded){
+    var card=grid.querySelector('.g-card[data-name="'+_expanded+'"]');
+    if(card)_openCardExpand(card,_expanded);
+  }
+}
+function _openCardExpand(card,name){
+  var d=_allData[name];
+  if(!d)return;
+  var grid=document.getElementById('card-grid');
+  // Remove any existing expand div
+  var old=grid.querySelector('.g-card-expand[data-expand-for="'+name+'"]');
+  if(old)old.remove();
+  // Build expand div — placed after card in DOM
+  var expDiv=document.createElement('div');
+  expDiv.className='g-card-expand open';
+  expDiv.setAttribute('data-expand-for',name);
+  var inner=document.createElement('div');
+  inner.className='g-expand-inner';
+  // Content: campaign table + alerts (no KPI cards — card shows them)
+  var h='';
+  if(d.campaigns&&d.campaigns.length>0){
+    h+='<div style="margin-bottom:20px"><div class="exp-section-label">Campaigns &mdash; '+(d.active_campaigns||0)+' active</div>';
+    h+=buildCampaignTable(d.campaigns);
+    h+='</div>';
+  }
+  var alerts=buildAlerts(name,d);
+  if(alerts.length){
+    alerts.forEach(function(a){h+='<div class="d-alert '+a.cls+'">'+a.msg+'</div>';});
+  }
+  if(!h)h='<p style="font-size:12px;color:var(--tx3)">No additional data.</p>';
+  inner.innerHTML=h;
+  expDiv.appendChild(inner);
+  // Insert expand div after the ROW pair, not just after the clicked card.
+  // In a 2-column grid, inserting after a left-column card breaks auto-placement
+  // because the full-width expand div pushes the right-column partner to the next row.
+  // Fix: if card is in the left column, insert after its right-column neighbor instead.
+  var allCards=Array.from(grid.querySelectorAll('.g-card,.g-card-err'));
+  var idx=allCards.indexOf(card);
+  var isTwoCol=window.matchMedia('(min-width:1100px)').matches;
+  var insertTarget=card;
+  if(isTwoCol&&idx%2===0&&idx+1<allCards.length){
+    insertTarget=allCards[idx+1]; // insert after right-column partner
+  }
+  insertTarget.insertAdjacentElement('afterend',expDiv);
+  setTimeout(function(){card.scrollIntoView({behavior:'smooth',block:'start'})},50);
+}
+function toggleCardGrid(card,name){
+  if(_expanded===name){
+    // Collapse
+    _expanded=null;
+    card.classList.remove('selected');
+    var grid=document.getElementById('card-grid');
+    var expDiv=grid.querySelector('.g-card-expand[data-expand-for="'+name+'"]');
+    if(expDiv)expDiv.remove();
+  } else {
+    // Collapse previous
+    if(_expanded){
+      var prevCard=document.querySelector('.g-card[data-name="'+_expanded+'"]');
+      if(prevCard)prevCard.classList.remove('selected');
+      var grid2=document.getElementById('card-grid');
+      var prevExp=grid2.querySelector('.g-card-expand[data-expand-for="'+_expanded+'"]');
+      if(prevExp)prevExp.remove();
+    }
+    _expanded=name;
+    card.classList.add('selected');
+    _openCardExpand(card,name);
+  }
+}
 function render(data){
   _allData=data;
-  renderChips(data);renderTable(data);renderCards(data);
+  renderChips(data);renderTable(data);renderCards(data);renderCardGrid(data);
   document.getElementById('ts').textContent='Updated '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
 }
 function hasLoading(data){
