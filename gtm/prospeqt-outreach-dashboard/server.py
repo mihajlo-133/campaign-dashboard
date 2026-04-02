@@ -381,16 +381,52 @@ def _http_post(url: str, headers: dict, body: dict, timeout: int = REQUEST_TIMEO
 
 
 def _count_not_contacted_from_analytics(analytics_entry: dict) -> int:
-    """Compute not-yet-contacted leads from analytics data.
+    """Compute not-yet-contacted leads from analytics data (fast estimate).
 
     not_contacted = leads_count - new_leads_contacted_count
     Uses new_leads_contacted_count (unique leads who received first email),
     NOT contacted_count (total contact events — can exceed leads_count for
     campaigns with moved/recycled leads, producing false negatives).
+
+    NOTE: This is a fast estimate used for the initial load. The background
+    backfill (_backfill_nc) overwrites these with ground-truth counts from
+    POST /leads/list with FILTER_VAL_NOT_CONTACTED.
     """
     leads = _safe_num(analytics_entry.get("leads_count"))
     contacted = _safe_num(analytics_entry.get("new_leads_contacted_count"))
     return max(0, leads - contacted)
+
+
+def _count_not_contacted_via_api(campaign_id: str, headers: dict) -> int:
+    """Count not-yet-contacted leads via paginated POST /leads/list.
+
+    This is the ground-truth count — matches the Instantly UI exactly.
+    Slower than analytics-based estimate but accurate for campaigns with
+    recycled/moved leads where analytics fields diverge.
+    """
+    count = 0
+    cursor = None
+    while True:
+        body = {
+            "filter": "FILTER_VAL_NOT_CONTACTED",
+            "campaign": campaign_id,
+            "limit": 100,
+        }
+        if cursor:
+            body["starting_after"] = cursor
+        try:
+            resp = _http_post(f"{INSTANTLY_BASE}/leads/list", headers, body)
+        except Exception:
+            break
+        if not resp:
+            break
+        items = resp.get("items", [])
+        count += len(items)
+        cursor = resp.get("next_starting_after")
+        if not items or not cursor:
+            break
+        time.sleep(0.1)  # rate limiting
+    return count
 
 
 def _paginate_instantly(url_base: str, headers: dict, limit: int = 100) -> list:
@@ -562,7 +598,8 @@ def fetch_instantly_data(client_name: str, api_key: str) -> dict:
     reply_trend = _trend(reply_rate_today, reply_rate_7d)
     sent_trend  = _trend(sent_today, avg_sent_7d)
 
-    # (Inactive campaigns no longer need backfill — not_contacted comes from analytics)
+    # Analytics-based not_contacted is a fast estimate; background backfill
+    # overwrites with ground-truth counts from POST /leads/list API
 
     # Build per-campaign list with today's data
     campaigns_list = []
@@ -595,6 +632,8 @@ def fetch_instantly_data(client_name: str, api_key: str) -> dict:
             "in_progress":    max(0, contacted - completed - bounced),
             # All-time (kept for reference)
             "total_sent":     _safe_num(a.get("emails_sent_count")),
+            "total_leads":    leads,
+            "total_completed": completed,
             "total_bounced":  bounced,
         })
 
@@ -643,6 +682,10 @@ def fetch_instantly_data(client_name: str, api_key: str) -> dict:
             for d in sorted(daily_data, key=lambda x: x.get("date", ""))
         ],
 
+        # Background backfill: ground-truth not-contacted counts via leads/list API
+        # _fetch_client extracts these before caching and spawns _backfill_nc
+        "_nc_backfill": [c.get("id") for c in campaigns if c.get("id")],
+        "_nc_api_key":  api_key,
     }
 
 
@@ -924,33 +967,37 @@ def _should_refresh(client_name: str) -> bool:
 
 
 def _backfill_nc(client_name: str, campaign_ids: list, api_key: str) -> None:
-    """Background: count not-contacted leads for inactive campaigns and merge into cache."""
+    """Background: get ground-truth not-contacted counts via leads/list API.
+
+    Overwrites the analytics-based estimates with exact counts from
+    POST /leads/list with FILTER_VAL_NOT_CONTACTED. Runs for all campaigns
+    (active and inactive) to ensure dashboard matches Instantly UI.
+    """
     headers = {"Authorization": f"Bearer {api_key}"}
+    nc_counts = {}
     for cid in campaign_ids:
-        count = _count_not_contacted(cid, headers)
-        if count > 0:
-            with _cache_lock:
-                data = _cache_data.get(client_name)
-                if not data:
-                    return
-                # Update top-level not_contacted total
-                data["not_contacted"] = data.get("not_contacted", 0) + count
-                # Update per-campaign entry and recalculate campaign-level in_progress
-                for camp in data.get("campaigns", []):
-                    if camp.get("id") == cid:
-                        camp["not_contacted"] = count
-                        camp["in_progress"] = max(
-                            0,
-                            camp.get("leads", 0) - camp.get("completed", 0)
-                            - camp.get("bounced", 0) - count
-                        )
-                        break
-                # Recalculate client-level in_progress
-                total_nc = sum(c.get("not_contacted", 0) for c in data.get("campaigns", []))
-                total_leads_c = sum(c.get("leads", 0) for c in data.get("campaigns", []))
-                total_completed_c = sum(c.get("completed", 0) for c in data.get("campaigns", []))
-                total_bounced_c = sum(c.get("bounced", 0) for c in data.get("campaigns", []))
-                data["in_progress"] = max(0, total_leads_c - total_completed_c - total_bounced_c - total_nc)
+        nc_counts[cid] = _count_not_contacted_via_api(cid, headers)
+
+    with _cache_lock:
+        data = _cache_data.get(client_name)
+        if not data:
+            return
+        # Update per-campaign not_contacted with ground-truth counts
+        for camp in data.get("campaigns", []):
+            cid = camp.get("id")
+            if cid in nc_counts:
+                camp["not_contacted"] = nc_counts[cid]
+        # Recalculate client-level totals from per-campaign data
+        active_camps = [c for c in data.get("campaigns", []) if c.get("status") == "active"]
+        data["not_contacted"] = sum(c.get("not_contacted", 0) for c in active_camps)
+        # Recalculate in_progress: leads - completed - bounced - not_contacted
+        total_leads = sum(c.get("total_leads", 0) for c in active_camps)
+        total_completed = sum(c.get("total_completed", 0) for c in active_camps)
+        total_bounced = sum(c.get("total_bounced", 0) for c in active_camps)
+        total_nc = data["not_contacted"]
+        data["in_progress"] = max(0, total_leads - total_completed - total_bounced - total_nc)
+        # Re-classify since not_contacted changed
+        data["status"] = _classify_client(data, client_name)
 
 
 def _fetch_client(client_name: str) -> None:
@@ -987,7 +1034,7 @@ def _fetch_client(client_name: str) -> None:
             _cache_ts[client_name]     = time.time()
             _cache_errors.pop(client_name, None)
 
-        # Phase 2: backfill not-contacted counts for inactive campaigns
+        # Phase 2: backfill ground-truth not-contacted counts via leads/list API
         if nc_backfill and nc_api_key:
             t = threading.Thread(
                 target=_backfill_nc,
