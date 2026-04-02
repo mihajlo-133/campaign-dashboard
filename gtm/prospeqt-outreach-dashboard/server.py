@@ -383,11 +383,13 @@ def _http_post(url: str, headers: dict, body: dict, timeout: int = REQUEST_TIMEO
 def _count_not_contacted_from_analytics(analytics_entry: dict) -> int:
     """Compute not-yet-contacted leads from analytics data.
 
-    not_contacted = leads_count - contacted_count
-    This matches Instantly UI and avoids expensive paginated /leads/list calls.
+    not_contacted = leads_count - new_leads_contacted_count
+    Uses new_leads_contacted_count (unique leads who received first email),
+    NOT contacted_count (total contact events — can exceed leads_count for
+    campaigns with moved/recycled leads, producing false negatives).
     """
     leads = _safe_num(analytics_entry.get("leads_count"))
-    contacted = _safe_num(analytics_entry.get("contacted_count"))
+    contacted = _safe_num(analytics_entry.get("new_leads_contacted_count"))
     return max(0, leads - contacted)
 
 
@@ -573,7 +575,7 @@ def fetch_instantly_data(client_name: str, api_key: str) -> dict:
         leads = _safe_num(a.get("leads_count"))
         completed = _safe_num(a.get("completed_count"))
         bounced = _safe_num(a.get("bounced_count"))
-        contacted = _safe_num(a.get("contacted_count"))
+        contacted = _safe_num(a.get("new_leads_contacted_count"))
         camp_sent_today = daily.get("sent", 0)
         camp_replies_today = daily.get("replies", 0)
 

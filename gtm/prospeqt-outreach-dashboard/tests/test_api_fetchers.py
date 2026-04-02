@@ -49,7 +49,7 @@ class TestFetchInstantlyData:
                 "reply_count": 20,
                 "total_opportunities": 5,
                 "leads_count": 500,
-                "contacted_count": 400,
+                "new_leads_contacted_count": 400,
                 "bounced_count": 10,
                 "completed_count": 380,
             },
@@ -72,7 +72,7 @@ class TestFetchInstantlyData:
         assert result["sent_today"] == 100
         assert result["replies_today"] == 3
         assert result["opps_today"] == 1
-        # not_contacted = leads_count(500) - contacted_count(400) = 100
+        # not_contacted = leads_count(500) - new_leads_contacted_count(400) = 100
         assert result["not_contacted"] == 100
         assert result["reply_rate_today"] == 3.0  # 3/100*100
         assert isinstance(result["campaigns"], list)
@@ -121,7 +121,7 @@ class TestFetchInstantlyData:
                 "reply_count": 20,
                 "total_opportunities": 5,
                 "leads_count": 400,
-                "contacted_count": 300,
+                "new_leads_contacted_count": 300,
                 "bounced_count": 10,
                 "completed_count": 280,
             },
@@ -131,7 +131,7 @@ class TestFetchInstantlyData:
                 "reply_count": 10,
                 "total_opportunities": 2,
                 "leads_count": 2000,
-                "contacted_count": 1800,
+                "new_leads_contacted_count": 1800,
                 "bounced_count": 500,  # big number — should NOT inflate active bounce_rate
                 "completed_count": 1700,
             },
@@ -150,7 +150,7 @@ class TestFetchInstantlyData:
         # in_progress = contacted - completed - bounced (active only)
         # active contacted=300, completed=280, bounced=10
         assert result["in_progress"] == 10  # 300 - 280 - 10
-        # not_contacted = leads - contacted (active only) = 400 - 300 = 100
+        # not_contacted = leads - new_leads_contacted (active only) = 400 - 300 = 100
         assert result["not_contacted"] == 100
 
         # Removed active_* top-level fields
@@ -167,8 +167,8 @@ class TestFetchInstantlyData:
             {"id": "c2", "name": "Camp B", "status": 1},
         ]
         analytics = [
-            {"campaign_id": "c1", "emails_sent_count": 500, "reply_count": 10, "total_opportunities": 2, "leads_count": 200, "contacted_count": 150, "bounced_count": 5, "completed_count": 140},
-            {"campaign_id": "c2", "emails_sent_count": 300, "reply_count": 6, "total_opportunities": 1, "leads_count": 120, "contacted_count": 90, "bounced_count": 3, "completed_count": 85},
+            {"campaign_id": "c1", "emails_sent_count": 500, "reply_count": 10, "total_opportunities": 2, "leads_count": 200, "new_leads_contacted_count": 150, "bounced_count": 5, "completed_count": 140},
+            {"campaign_id": "c2", "emails_sent_count": 300, "reply_count": 6, "total_opportunities": 1, "leads_count": 120, "new_leads_contacted_count": 90, "bounced_count": 3, "completed_count": 85},
         ]
         # Aggregate daily (used for sent_today totals)
         daily = [
