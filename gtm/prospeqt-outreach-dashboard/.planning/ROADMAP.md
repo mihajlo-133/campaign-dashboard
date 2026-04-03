@@ -12,7 +12,7 @@ This is a brownfield refactor of a 28-hour-old codebase that already has critica
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Critical Bug Fixes** - Restore admin panel functionality and fix race conditions / unbounded threads
+- [x] **Phase 1: Critical Bug Fixes** - Restore admin panel functionality and fix race conditions / unbounded threads (completed 2026-04-03)
 - [ ] **Phase 2: Data Contracts and Shared Helpers** - Explicit interfaces between all major components and DRY fetcher logic
 - [ ] **Phase 3: Platform Adapter and State Encapsulation** - Adapter pattern dispatch and global mutable state in a manager class
 - [ ] **Phase 4: Production Resilience** - Stale-while-revalidate, retry/backoff, and config schema versioning
@@ -34,8 +34,8 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. The ThreadPoolExecutor for per-campaign backfill never spawns more than 10 concurrent threads regardless of how many campaigns are active
 **Plans**: 2 plans
 Plans:
-- [ ] 01-01-PLAN.md — Implement admin auth functions (_check_admin_auth, _make_token) + regression tests
-- [ ] 01-02-PLAN.md — Fix backfill race condition with generation counter + bound threads to ThreadPoolExecutor
+- [x] 01-01-PLAN.md — Implement admin auth functions (_check_admin_auth, _make_token) + regression tests
+- [x] 01-02-PLAN.md — Fix backfill race condition with generation counter + bound threads to ThreadPoolExecutor
 
 ### Phase 2: Data Contracts and Shared Helpers
 **Goal**: Every data boundary in the codebase has an explicit, documented contract and duplicated fetcher logic is extracted into shared helpers
@@ -118,7 +118,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Critical Bug Fixes | 0/2 | Not started | - |
+| 1. Critical Bug Fixes | 2/2 | Complete   | 2026-04-03 |
 | 2. Data Contracts and Shared Helpers | 0/TBD | Not started | - |
 | 3. Platform Adapter and State Encapsulation | 0/TBD | Not started | - |
 | 4. Production Resilience | 0/TBD | Not started | - |

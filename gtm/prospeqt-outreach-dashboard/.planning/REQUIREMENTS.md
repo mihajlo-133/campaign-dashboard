@@ -9,8 +9,8 @@
 
 - [ ] **BUG-01**: Admin authentication works end-to-end (login, session token, route protection)
 - [ ] **BUG-02**: All admin API routes respond without NameError (ping, ping-log, config GET/POST)
-- [ ] **BUG-03**: Background backfill does not cause stale not_contacted counts when backfill exceeds cache TTL
-- [ ] **BUG-04**: Thread spawning is bounded (max 10 concurrent threads per fetch, regardless of campaign count)
+- [x] **BUG-03**: Background backfill does not cause stale not_contacted counts when backfill exceeds cache TTL
+- [x] **BUG-04**: Thread spawning is bounded (max 10 concurrent threads per fetch, regardless of campaign count)
 
 ### Architecture
 
@@ -83,8 +83,8 @@
 |-------------|-------|--------|
 | BUG-01 | Phase 1 | Pending |
 | BUG-02 | Phase 1 | Pending |
-| BUG-03 | Phase 1 | Pending |
-| BUG-04 | Phase 1 | Pending |
+| BUG-03 | Phase 1 | Complete |
+| BUG-04 | Phase 1 | Complete |
 | ARCH-01 | Phase 2 | Pending |
 | ARCH-02 | Phase 2 | Pending |
 | ARCH-03 | Phase 3 | Pending |
