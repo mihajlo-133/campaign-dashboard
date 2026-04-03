@@ -98,6 +98,12 @@ td{padding:0 16px;font-size:13px;color:var(--tx1);white-space:nowrap;border-bott
 tbody tr:last-child td{border-bottom:none}
 td.num{text-align:right;font-family:'Space Mono',monospace;font-size:13px}
 .client-name{font-weight:600;font-size:13px;letter-spacing:-.01em;font-family:'Space Grotesk',sans-serif}
+.ext-link{color:var(--tx3);text-decoration:none;font-size:12px;margin-left:4px;opacity:.5;transition:opacity .15s}.ext-link:hover{opacity:1;color:var(--accent)}
+.view-dash-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;border:none;background:var(--blue);color:#fff;font-size:12px;font-weight:600;font-family:'Space Grotesk',sans-serif;letter-spacing:.01em;cursor:pointer;text-decoration:none;transition:background .15s,transform .1s;white-space:nowrap}
+.view-dash-btn:hover{background:var(--blue-h);transform:translateY(-1px)}
+.view-dash-btn:active{transform:translateY(0)}
+.view-dash-btn svg{flex-shrink:0}
+.g-card-action{padding:12px 20px 16px;border-top:1px solid var(--bd)}
 .client-plat{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--tx3);letter-spacing:.02em;text-transform:uppercase;margin-top:1px;font-family:'Space Mono',monospace}
 .plat-logo{width:14px;height:14px;border-radius:3px;object-fit:contain;flex-shrink:0}
 .cell-val{font-family:'Space Mono',monospace}
@@ -308,6 +314,8 @@ var _allData = {};
 var _sortCol = 'status', _sortDir = 1;
 var _expanded = null;
 var PLAT_LOGOS={instantly:'https://instantly.ai/blog/content/images/2024/05/cleaned_rounded.png',emailbison:'https://media.licdn.com/dms/image/v2/D4E0BAQGpOS_Byh2OIw/company-logo_200_200/company-logo_200_200/0/1732486612419?e=2147483647&v=beta&t=6FgrEcbuxBgMDPbTksuPOVFkhApor1pUxpM3EJLAiOs'};
+function extLink(d){if(!d.instantly_url)return '';return ' <a href="'+d.instantly_url+'" target="_blank" rel="noopener" class="ext-link" title="Open in Instantly" onclick="event.stopPropagation()">&#x2197;</a>'}
+function extLinkBtn(d){if(!d.instantly_url)return '';return '<a href="'+d.instantly_url+'" target="_blank" rel="noopener" class="plat-link-btn" data-tip="Open in Instantly" onclick="event.stopPropagation()" aria-label="Open in Instantly"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M10 2h4v4M14 2L8 8M7 3H3a1 1 0 00-1 1v9a1 1 0 001 1h9a1 1 0 001-1V9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></a>'}
 function platLabel(p){var label=p==='instantly'?'Instantly':'EmailBison';var src=PLAT_LOGOS[p];if(!src)return label;return '<img class="plat-logo" src="'+src+'" alt="'+label+'"> '+label}
 function platIcon(p){var src=PLAT_LOGOS[p];var label=p==='instantly'?'Instantly':'EmailBison';if(!src)return '';return '<img class="plat-logo" src="'+src+'" alt="'+label+'">'}
 function fmt(n){return n==null?'--':Number(n).toLocaleString('en-US')}
@@ -365,7 +373,7 @@ function renderTable(data){
     var selCls=isExp?' selected':'';
     var expCls=isExp?' expanded':'';
     rows+='<tr data-name="'+name+'" tabindex="0" class="'+selCls+expCls+'" onclick="toggleRow(this,\''+name+'\')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();toggleRow(this,\''+name+'\')}">';
-    rows+='<td><div class="client-name">'+name+'</div><div class="client-plat">'+platLabel(d.platform)+'</div></td>';
+    rows+='<td><div class="client-name">'+name+extLink(d)+'</div><div class="client-plat">'+platLabel(d.platform)+'</div></td>';
     // Sent today
     rows+='<td class="num"><span class="cell-val '+sc+'">'+fmt(d.sent_today)+'</span>'+trend(d.sent_trend)+'</td>';
     // First touch
@@ -776,6 +784,9 @@ function renderCardGrid(data){
     html+='<div class="g-lower-sub"><span class="dot dot-'+(bc==='r'?'red':bc==='a'?'amber':'green')+'"></span>&nbsp;'+(bc==='r'?'Critical':bc==='a'?'Elevated':'Normal')+' &middot; '+ipVal+' in progress</div>';
     html+='</div>';
     html+='</div>'; // end lower
+    if(d.instantly_url){
+      html+='<div class="g-card-action"><a href="'+d.instantly_url+'" target="_blank" rel="noopener" class="view-dash-btn" onclick="event.stopPropagation()">View in Instantly <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></a></div>';
+    }
     html+='</div>'; // end .g-card
   });
   grid.innerHTML=html;

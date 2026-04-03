@@ -264,13 +264,13 @@ def validate_config(data: dict) -> tuple:
 
 CLIENTS = {
     # Instantly v2
-    "MyPlace":       {"platform": "instantly", "env_var": "INSTANTLY_MYPLACE",       "key_path": "tools/accounts/myplace/instantly.md"},
-    "SwishFunding":  {"platform": "instantly", "env_var": "INSTANTLY_SWISHFUNDING",  "key_path": "tools/accounts/swishfunding/instantly.md"},
-    "SmartMatchApp": {"platform": "instantly", "env_var": "INSTANTLY_SMARTMATCHAPP", "key_path": "tools/accounts/smartmatchapp/instantly.md"},
-    "HeyReach":      {"platform": "instantly", "env_var": "INSTANTLY_HEYREACH",      "key_path": "tools/accounts/heyreach-client/instantly.md"},
-    "Kayse":         {"platform": "instantly", "env_var": "INSTANTLY_KAYSE",          "key_path": "tools/accounts/kayse/instantly.md"},
-    "Prosperly":     {"platform": "instantly", "env_var": "INSTANTLY_PROSPERLY",     "key_path": "tools/accounts/prospeqt/prosperly_instantly.md"},
-    "Enavra":        {"platform": "instantly", "env_var": "INSTANTLY_ENAVRA",        "key_path": "tools/accounts/enavra/instantly.md"},
+    "MyPlace":       {"platform": "instantly", "env_var": "INSTANTLY_MYPLACE",       "key_path": "tools/accounts/myplace/instantly.md",              "workspace_id": "3c4b6833-22ba-4cee-8215-021ab01da35e"},
+    "SwishFunding":  {"platform": "instantly", "env_var": "INSTANTLY_SWISHFUNDING",  "key_path": "tools/accounts/swishfunding/instantly.md",         "workspace_id": "b6f49b96-a950-4c7c-be1c-9370b185922f"},
+    "SmartMatchApp": {"platform": "instantly", "env_var": "INSTANTLY_SMARTMATCHAPP", "key_path": "tools/accounts/smartmatchapp/instantly.md",        "workspace_id": "cfedb87e-bd53-4e57-bb9f-6429930cf928"},
+    "HeyReach":      {"platform": "instantly", "env_var": "INSTANTLY_HEYREACH",      "key_path": "tools/accounts/heyreach-client/instantly.md",      "workspace_id": "ca623f10-3378-4bd0-aebe-1557bdcfc9a0"},
+    "Kayse":         {"platform": "instantly", "env_var": "INSTANTLY_KAYSE",          "key_path": "tools/accounts/kayse/instantly.md",                "workspace_id": "796f9bc3-2b29-4df8-a4da-0d9ff7fe6da3"},
+    "Prosperly":     {"platform": "instantly", "env_var": "INSTANTLY_PROSPERLY",     "key_path": "tools/accounts/prospeqt/prosperly_instantly.md",   "workspace_id": "10b3e975-f70b-483e-bb5a-613a60060147"},
+    "Enavra":        {"platform": "instantly", "env_var": "INSTANTLY_ENAVRA",        "key_path": "tools/accounts/enavra/instantly.md",               "workspace_id": "038fbeb2-d826-415e-be68-b77654f78a88"},
 
     # EmailBison
     "RankZero":          {"platform": "emailbison", "env_var": "EMAILBISON_RANKZERO",      "key_path": "tools/accounts/rankzero/emailbison.md"},
@@ -1098,7 +1098,13 @@ def _load_mock_data() -> dict:
 def get_all_data() -> dict:
     """Return cached data instantly — never blocks on API fetches."""
     if _MOCK_MODE:
-        return _load_mock_data()
+        data = _load_mock_data()
+        for name, entry in data.items():
+            if name in CLIENTS:
+                wks = CLIENTS[name].get("workspace_id")
+                if wks:
+                    entry["instantly_url"] = f"https://app.instantly.ai/app/analytics/overview?selected_wks={wks}"
+        return data
 
     # Ensure background refresh is running
     start_background_refresh()
@@ -1117,6 +1123,9 @@ def get_all_data() -> dict:
             # Always apply current thresholds so config changes take effect
             # immediately without waiting for the next background fetch cycle.
             entry["thresholds"] = get_client_thresholds(name)
+            wks = CLIENTS[name].get("workspace_id")
+            if wks:
+                entry["instantly_url"] = f"https://app.instantly.ai/app/analytics/overview?selected_wks={wks}"
             result[name] = entry
     return result
 
