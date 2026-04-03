@@ -20,6 +20,7 @@ import threading
 import urllib.request
 import urllib.error
 import urllib.parse
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from pathlib import Path
@@ -950,15 +951,18 @@ def _classify_client(data: dict, client_name: str) -> str:
 # Data cache with TTL
 # ---------------------------------------------------------------------------
 
-_cache_lock   = threading.Lock()
-_cache_data   = {}   # {client_name: {...data...}}
-_cache_ts     = {}   # {client_name: float timestamp}
-_cache_errors = {}   # {client_name: str error message}
+_cache_lock       = threading.Lock()
+_cache_data       = {}   # {client_name: {...data...}}
+_cache_ts         = {}   # {client_name: float timestamp}
+_cache_errors     = {}   # {client_name: str error message}
+_cache_generation = {}   # {client_name: int} — monotonic generation counter for stale backfill detection
 
 _step_cache_lock = threading.Lock()
 _step_cache_data = {}   # {client_name: list}
 _step_cache_ts   = {}   # {client_name: float}
 STEP_CACHE_TTL   = 900  # 15 minutes
+
+_backfill_pool = ThreadPoolExecutor(max_workers=10)
 
 
 def _should_refresh(client_name: str) -> bool:
@@ -966,12 +970,15 @@ def _should_refresh(client_name: str) -> bool:
     return (time.time() - ts) > CACHE_TTL
 
 
-def _backfill_nc(client_name: str, campaign_ids: list, api_key: str) -> None:
+def _backfill_nc(client_name: str, campaign_ids: list, api_key: str, generation: int) -> None:
     """Background: get ground-truth not-contacted counts via leads/list API.
 
     Overwrites the analytics-based estimates with exact counts from
     POST /leads/list with FILTER_VAL_NOT_CONTACTED. Runs for all campaigns
     (active and inactive) to ensure dashboard matches Instantly UI.
+
+    The generation parameter prevents stale backfill results from overwriting
+    fresher data fetched after this backfill was submitted to the pool.
     """
     headers = {"Authorization": f"Bearer {api_key}"}
     nc_counts = {}
@@ -979,6 +986,10 @@ def _backfill_nc(client_name: str, campaign_ids: list, api_key: str) -> None:
         nc_counts[cid] = _count_not_contacted_via_api(cid, headers)
 
     with _cache_lock:
+        # Generation check: discard results if a newer fetch has already updated the cache
+        current_gen = _cache_generation.get(client_name, 0)
+        if current_gen != generation:
+            return  # Newer fetch happened — discard stale backfill results
         data = _cache_data.get(client_name)
         if not data:
             return
@@ -1033,15 +1044,13 @@ def _fetch_client(client_name: str) -> None:
             _cache_data[client_name]   = result
             _cache_ts[client_name]     = time.time()
             _cache_errors.pop(client_name, None)
+            # Increment generation so any in-flight backfill knows its results are stale
+            _cache_generation[client_name] = _cache_generation.get(client_name, 0) + 1
+            gen = _cache_generation[client_name]
 
         # Phase 2: backfill ground-truth not-contacted counts via leads/list API
         if nc_backfill and nc_api_key:
-            t = threading.Thread(
-                target=_backfill_nc,
-                args=(client_name, nc_backfill, nc_api_key),
-                daemon=True,
-            )
-            t.start()
+            _backfill_pool.submit(_backfill_nc, client_name, nc_backfill, nc_api_key, gen)
 
     except Exception as exc:
         with _cache_lock:
@@ -1055,14 +1064,15 @@ _bg_refresh_running = False
 def _background_refresh_loop():
     """Continuously refresh all clients on a timer. Runs in a daemon thread."""
     while True:
-        threads = []
+        futures = []
         for name in CLIENTS:
             if _should_refresh(name):
-                t = threading.Thread(target=_fetch_client, args=(name,), daemon=True)
-                t.start()
-                threads.append(t)
-        for t in threads:
-            t.join(timeout=REQUEST_TIMEOUT + 5)
+                futures.append(_backfill_pool.submit(_fetch_client, name))
+        for f in futures:
+            try:
+                f.result(timeout=REQUEST_TIMEOUT + 5)
+            except Exception:
+                pass  # errors already handled inside _fetch_client
         time.sleep(60)  # check every 60s, but CACHE_TTL controls actual refresh
 
 
@@ -1214,10 +1224,9 @@ class Handler(BaseHTTPRequestHandler):
                 _cache_ts.clear()
                 _cache_data.clear()
                 _cache_errors.clear()
-            # Kick off immediate re-fetch in background threads
+            # Kick off immediate re-fetch via bounded thread pool
             for name in CLIENTS:
-                t = threading.Thread(target=_fetch_client, args=(name,), daemon=True)
-                t.start()
+                _backfill_pool.submit(_fetch_client, name)
             self.send_response(204)
             self.end_headers()
         elif self.path == "/admin/login":
