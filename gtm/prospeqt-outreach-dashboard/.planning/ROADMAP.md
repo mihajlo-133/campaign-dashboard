@@ -45,7 +45,10 @@ Plans:
   1. A developer (or Claude Code in a new session) can read a single location to see every required and optional key that a fetcher must return
   2. The rate_calc, 7-day average, and campaign grouping logic exists in exactly one place and is called by both the Instantly and EmailBison fetchers
   3. All existing tests pass without modification after the helper extraction
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 02-01-PLAN.md — Define TypedDict contracts (ClientData, CampaignData, DailyData) + contract compliance tests
+- [ ] 02-02-PLAN.md — Extract shared helpers (_calc_rates, _build_client_data) + refactor both fetchers
 
 ### Phase 3: Platform Adapter and State Encapsulation
 **Goal**: Platform dispatch is table-driven (not if/elif) and all global mutable state is managed through a single class
@@ -119,7 +122,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Critical Bug Fixes | 2/2 | Complete   | 2026-04-03 |
-| 2. Data Contracts and Shared Helpers | 0/TBD | Not started | - |
+| 2. Data Contracts and Shared Helpers | 0/2 | Not started | - |
 | 3. Platform Adapter and State Encapsulation | 0/TBD | Not started | - |
 | 4. Production Resilience | 0/TBD | Not started | - |
 | 5. Admin Panel | 0/TBD | Not started | - |
