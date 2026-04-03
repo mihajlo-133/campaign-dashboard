@@ -25,9 +25,9 @@ At a glance, any Prospeqt team member can see which clients are healthy and whic
 
 ### Active
 
-- [ ] Fix broken admin authentication (6 undefined functions crash at runtime)
-- [ ] Fix race condition in background backfill (stale not_contacted when backfill > cache TTL)
-- [ ] Bound thread spawning (prevent 1000+ threads with many campaigns)
+- ✓ Fix broken admin authentication (6 undefined functions crash at runtime) — Validated in Phase 01: critical-bug-fixes
+- ✓ Fix race condition in background backfill (stale not_contacted when backfill > cache TTL) — Validated in Phase 01: critical-bug-fixes
+- ✓ Bound thread spawning (prevent 1000+ threads with many campaigns) — Validated in Phase 01: critical-bug-fixes
 - [ ] Modular codebase architecture optimized for AI agent (Claude Code) navigability
 - [ ] Explicit data contracts between fetchers, classifier, cache, and frontend
 - [ ] Admin panel: edit KPI targets per client
@@ -80,7 +80,7 @@ At a glance, any Prospeqt team member can see which clients are healthy and whic
 | Keep table layout, minor polish only | Current layout works for the team. Full redesign not justified. | — Pending |
 | Modular file split when server.py > ~1,800 lines | Below pain threshold now at 1,299. Section banners work. Split at natural growth point. | — Pending |
 | Platform adapter pattern (dict dispatch first) | Only 2 platforms now. Full class adapters when platform #3 arrives. | — Pending |
-| Fix critical bugs before structural refactor | Broken admin, race conditions, and unbounded threads are ship-blocking | — Pending |
+| Fix critical bugs before structural refactor | Broken admin, race conditions, and unbounded threads are ship-blocking | ✓ Done (Phase 01) |
 
 ## Evolution
 
@@ -100,4 +100,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-02 after initialization*
+*Last updated: 2026-04-03 after Phase 01 completion*
