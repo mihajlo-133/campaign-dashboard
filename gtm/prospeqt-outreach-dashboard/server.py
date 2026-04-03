@@ -1129,6 +1129,35 @@ ADMIN_HTML = _load_template("admin.html")
 
 
 
+# ---------------------------------------------------------------------------
+# Admin auth helpers — HMAC-SHA256 cookie-based session auth
+# ---------------------------------------------------------------------------
+
+
+def _make_token(password: str) -> str:
+    """Create HMAC-SHA256 token from admin password for cookie auth."""
+    return hmac.new(password.encode(), b"prospeqt-admin-session", hashlib.sha256).hexdigest()
+
+
+def _check_admin_auth(handler) -> bool:
+    """Check if request has valid admin session cookie."""
+    cookie_header = handler.headers.get("Cookie", "")
+    for part in cookie_header.split(";"):
+        part = part.strip()
+        if part.startswith("admin_token="):
+            token = part[len("admin_token="):]
+            expected_password = os.environ.get("ADMIN_PASSWORD", "")
+            if not expected_password:
+                return False
+            return hmac.compare_digest(token, _make_token(expected_password))
+    return False
+
+
+# ---------------------------------------------------------------------------
+# HTTP handler & admin routes
+# ---------------------------------------------------------------------------
+
+
 class Handler(BaseHTTPRequestHandler):
     def do_HEAD(self):
         _record_ping("head")
