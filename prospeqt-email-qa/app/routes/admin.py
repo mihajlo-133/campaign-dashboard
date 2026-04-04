@@ -1,7 +1,8 @@
+from pathlib import Path
+
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
-from pathlib import Path
 
 from app.services.auth import check_password, create_session_token, require_admin
 from app.services.workspace import add_workspace, list_workspaces, remove_workspace
@@ -12,7 +13,7 @@ templates = Jinja2Templates(directory=str(Path(__file__).parent.parent / "templa
 
 @router.get("/login", response_class=HTMLResponse)
 async def admin_login_page(request: Request):
-    return templates.TemplateResponse("login.html", {"request": request})
+    return templates.TemplateResponse(request, "login.html")
 
 
 @router.post("/login")
@@ -29,8 +30,9 @@ async def admin_login(request: Request, password: str = Form(...)):
         )
         return response
     return templates.TemplateResponse(
+        request,
         "login.html",
-        {"request": request, "error": "Incorrect password. Try again."},
+        context={"error": "Incorrect password. Try again."},
         status_code=200,
     )
 
@@ -38,9 +40,7 @@ async def admin_login(request: Request, password: str = Form(...)):
 @router.get("", response_class=HTMLResponse)
 async def admin_panel(request: Request, _: None = Depends(require_admin)):
     workspaces = list_workspaces()
-    return templates.TemplateResponse(
-        "admin.html", {"request": request, "workspaces": workspaces}
-    )
+    return templates.TemplateResponse(request, "admin.html", context={"workspaces": workspaces})
 
 
 @router.post("/workspaces")
@@ -55,8 +55,9 @@ async def add_workspace_route(
     if not name or not key:
         workspaces = list_workspaces()
         return templates.TemplateResponse(
+            request,
             "admin.html",
-            {"request": request, "workspaces": workspaces, "error": "Both Workspace Name and API Key are required."},
+            context={"workspaces": workspaces, "error": "Both Workspace Name and API Key are required."},
             status_code=400,
         )
     add_workspace(name.lower().replace(" ", "-"), key)
