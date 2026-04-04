@@ -78,8 +78,12 @@ Plans:
   2. Playwright screenshots at desktop (1440x900), tablet (768x1024), and mobile (375x812) show no broken layouts or overflowing elements
   3. All 6 Prospeqt client workspaces are configured and the dashboard is live at a Render URL accessible to the team
   4. Manual "run check" user flow completes successfully in a Playwright end-to-end test (click trigger → loading state → results update)
-**Plans**: TBD
-**UI hint**: yes
+**Plans**: 3 plans
+
+Plans:
+- [ ] 04-01-PLAN.md — CSS design system refinement, health endpoint, UX expert agent audit
+- [ ] 04-02-PLAN.md — Playwright visual QA at 3 viewports + interaction flow test
+- [ ] 04-03-PLAN.md — GitHub repo, Render deployment, workspace configuration
 
 ## Progress
 
@@ -91,4 +95,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | 1. API Foundation | 3/3 | Complete   | 2026-04-04 |
 | 2. QA Engine + Background | 2/2 | Complete | 2026-04-04 |
 | 3. Dashboard Views | 3/3 | Complete   | 2026-04-04 |
-| 4. UX Polish + Deployment | 0/TBD | Not started | - |
+| 4. UX Polish + Deployment | 0/3 | Not started | - |
