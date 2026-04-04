@@ -62,8 +62,12 @@ Plans:
   3. Engineer can click into a campaign and see a per-variable breakdown: "cityName — 12 leads broken"
   4. Engineer can drill into a campaign and see which specific leads are broken: email address + which variables are broken + current values
   5. Navigation flows naturally from all-workspaces → workspace → campaign → lead list with no dead ends
-**Plans**: TBD
-**UI hint**: yes
+**Plans**: 3 plans
+
+Plans:
+- [ ] 03-01-PLAN.md — Extend QA model with BrokenLeadDetail for per-lead drill-down
+- [ ] 03-02-PLAN.md — Overview page (workspace cards) and workspace detail page (campaign table)
+- [ ] 03-03-PLAN.md — Campaign detail page with variable summary, broken leads table, pagination
 
 ### Phase 4: UX Polish + Deployment
 **Goal**: The dashboard is visually polished, Playwright-validated at three viewports, and deployed to Render with all 6 existing workspaces pre-configured
@@ -85,6 +89,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. API Foundation | 3/3 | Complete   | 2026-04-04 |
-| 2. QA Engine + Background | 1/2 | In Progress|  |
-| 3. Dashboard Views | 0/TBD | Not started | - |
+| 2. QA Engine + Background | 2/2 | Complete | 2026-04-04 |
+| 3. Dashboard Views | 0/3 | Not started | - |
 | 4. UX Polish + Deployment | 0/TBD | Not started | - |
