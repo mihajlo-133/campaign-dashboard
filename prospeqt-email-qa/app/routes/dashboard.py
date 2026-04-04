@@ -176,10 +176,9 @@ async def scan_all(request: Request):
             "freshness_txt": freshness_text(ws.last_checked),
             "error": ws.error,
         })
-    return templates.TemplateResponse(request, "dashboard.html", {
+    return templates.TemplateResponse(request, "_workspace_grid.html", {
         "workspaces": ws_display,
         "ws_count": len(ws_display),
-        "partial": True,
     })
 
 
@@ -328,8 +327,8 @@ async def scan_workspace(request: Request, ws_name: str):
                 "freshness_cls": freshness_class(c.last_checked),
                 "freshness_txt": freshness_text(c.last_checked),
             })
-    return templates.TemplateResponse(request, "workspace.html", {
+    return templates.TemplateResponse(request, "_campaign_table.html", {
         "ws_name": ws_name,
         "campaigns": campaigns_display,
-        "partial": True,
+        "not_scanned": False,
     })
