@@ -25,6 +25,10 @@
       --red: #c33939;
       --sh: 0 1px 3px rgba(0,0,0,0.04), 0 2px 8px rgba(0,0,0,0.04);
       --sh-md: 0 4px 12px rgba(0,0,0,0.08);
+      --sh-lg: 0 8px 24px rgba(0,0,0,0.12);
+      --radius: 8px;
+      --radius-lg: 12px;
+      --transition: 0.2s ease;
     }
 
     *, *::before, *::after {
@@ -84,7 +88,7 @@
       cursor: pointer;
       text-decoration: none;
       color: var(--tx2);
-      transition: background 0.15s, border-color 0.15s;
+      transition: background var(--transition), border-color var(--transition);
       padding: 4px;
     }
 
@@ -162,7 +166,7 @@
       border: none;
       cursor: pointer;
       font-family: inherit;
-      transition: background 0.15s;
+      transition: background var(--transition);
     }
     .scan-btn-primary:hover { background: var(--blue-h); }
     .scan-btn-primary[disabled] { pointer-events: none; opacity: 0.6; }
@@ -182,7 +186,7 @@
       min-height: 44px;
       cursor: pointer;
       font-family: inherit;
-      transition: background 0.15s, border-color 0.15s;
+      transition: background var(--transition), border-color var(--transition);
     }
     .scan-btn-secondary:hover { background: var(--bg-hov); border-color: var(--bd-s); }
     .scan-btn-secondary[disabled] { pointer-events: none; opacity: 0.6; }
@@ -247,6 +251,9 @@
       margin: 0 auto;
       padding: 24px;
     }
+
+    /* Utility: meta/label text */
+    .text-meta { font-size: 12px; color: var(--tx3); font-weight: 500; letter-spacing: 0.01em; }
 
     /* Freshness indicator */
     .freshness { font-size: 13px; }

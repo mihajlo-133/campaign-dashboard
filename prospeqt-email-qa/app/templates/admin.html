@@ -27,7 +27,7 @@
     font-size: 12px;
     color: var(--tx2);
     text-decoration: none;
-    transition: color 0.15s;
+    transition: color var(--transition);
   }
 
   .signout-link:hover {
@@ -81,7 +81,7 @@
     font-family: inherit;
     color: var(--tx1);
     outline: none;
-    transition: border-color 0.15s;
+    transition: border-color var(--transition);
   }
 
   .form-input:focus {
@@ -99,7 +99,7 @@
     border: none;
     cursor: pointer;
     align-self: flex-start;
-    transition: opacity 0.15s;
+    transition: opacity var(--transition);
   }
 
   .btn-add:hover:not(:disabled) {
@@ -141,6 +141,11 @@
 
   .ws-table tbody tr:nth-child(even) {
     background: rgba(0, 0, 0, 0.015);
+  }
+
+  .ws-table tbody tr:hover td {
+    background: var(--bg-hov);
+    transition: background var(--transition);
   }
 
   .ws-name {
