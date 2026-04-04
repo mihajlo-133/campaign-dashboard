@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: API Foundation** - Instantly v2 client, workspace admin panel, project scaffold (completed 2026-04-04)
 - [ ] **Phase 2: QA Engine + Background** - Variable extraction, lead flagging, cache, background poller
-- [ ] **Phase 3: Dashboard Views** - All-workspaces, workspace, campaign, and per-lead UI
+- [x] **Phase 3: Dashboard Views** - All-workspaces, workspace, campaign, and per-lead UI (completed 2026-04-04)
 - [ ] **Phase 4: UX Polish + Deployment** - Visual design, Playwright QA, Render deployment
 
 ## Phase Details
@@ -67,7 +67,7 @@ Plans:
 Plans:
 - [x] 03-01-PLAN.md — Extend QA model with BrokenLeadDetail for per-lead drill-down
 - [x] 03-02-PLAN.md — Overview page (workspace cards) and workspace detail page (campaign table)
-- [ ] 03-03-PLAN.md — Campaign detail page with variable summary, broken leads table, pagination
+- [x] 03-03-PLAN.md — Campaign detail page with variable summary, broken leads table, pagination
 
 ### Phase 4: UX Polish + Deployment
 **Goal**: The dashboard is visually polished, Playwright-validated at three viewports, and deployed to Render with all 6 existing workspaces pre-configured
@@ -90,5 +90,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 |-------|----------------|--------|-----------|
 | 1. API Foundation | 3/3 | Complete   | 2026-04-04 |
 | 2. QA Engine + Background | 2/2 | Complete | 2026-04-04 |
-| 3. Dashboard Views | 2/3 | In Progress|  |
+| 3. Dashboard Views | 3/3 | Complete   | 2026-04-04 |
 | 4. UX Polish + Deployment | 0/TBD | Not started | - |
