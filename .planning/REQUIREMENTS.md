@@ -62,7 +62,7 @@
 - [ ] **ADM-02**: Admin panel to remove existing workspaces
 - [ ] **ADM-03**: Admin panel protected by simple password authentication
 - [ ] **ADM-04**: QA viewing is open access — no login required to see results
-- [ ] **ADM-05**: API keys stored server-side with file-based persistence (survives app restarts, supports runtime add/remove)
+- [x] **ADM-05**: API keys stored server-side with file-based persistence (survives app restarts, supports runtime add/remove)
 
 ### UX & Visual Design
 
@@ -74,10 +74,10 @@
 
 ### Infrastructure
 
-- [ ] **INF-01**: Modular codebase — routes, API clients, QA logic, templates in separate modules
-- [ ] **INF-02**: Deployable to Render as a standard Python web app
-- [ ] **INF-03**: No hardcoded API keys in source code
-- [ ] **INF-04**: Project pushed to GitHub as its own repository (or directory)
+- [x] **INF-01**: Modular codebase — routes, API clients, QA logic, templates in separate modules
+- [x] **INF-02**: Deployable to Render as a standard Python web app
+- [x] **INF-03**: No hardcoded API keys in source code
+- [x] **INF-04**: Project pushed to GitHub as its own repository (or directory)
 
 ## v2 Requirements
 
@@ -146,16 +146,16 @@
 | ADM-02 | Phase 1 | Pending |
 | ADM-03 | Phase 1 | Pending |
 | ADM-04 | Phase 1 | Pending |
-| ADM-05 | Phase 1 | Pending |
+| ADM-05 | Phase 1 | Complete |
 | UX-01 | Phase 4 | Pending |
 | UX-02 | Phase 3 | Pending |
 | UX-03 | Phase 3 | Pending |
 | UX-04 | Phase 4 | Pending |
 | UX-05 | Phase 4 | Pending |
-| INF-01 | Phase 1 | Pending |
-| INF-02 | Phase 1 | Pending |
-| INF-03 | Phase 1 | Pending |
-| INF-04 | Phase 1 | Pending |
+| INF-01 | Phase 1 | Complete |
+| INF-02 | Phase 1 | Complete |
+| INF-03 | Phase 1 | Complete |
+| INF-04 | Phase 1 | Complete |
 
 **Coverage:**
 - v1 requirements: 40 total

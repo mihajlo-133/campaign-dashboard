@@ -32,7 +32,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 3 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — Project scaffold, config, workspace registry, test infrastructure
+- [x] 01-01-PLAN.md — Project scaffold, config, workspace registry, test infrastructure
 - [ ] 01-02-PLAN.md — Instantly v2 async API client with pagination, filtering, rate limiting
 - [ ] 01-03-PLAN.md — Admin panel routes, auth, templates (UI-SPEC), integration tests
 
@@ -80,7 +80,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. API Foundation | 0/3 | Planning complete | - |
+| 1. API Foundation | 1/3 | In Progress|  |
 | 2. QA Engine + Background | 0/TBD | Not started | - |
 | 3. Dashboard Views | 0/TBD | Not started | - |
 | 4. UX Polish + Deployment | 0/TBD | Not started | - |
