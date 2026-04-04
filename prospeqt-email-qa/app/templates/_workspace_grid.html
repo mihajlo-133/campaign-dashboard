@@ -1,5 +1,6 @@
 {% if workspaces %}
-<div class="ws-grid" id="workspace-grid">
+<div class="ws-grid" id="workspace-grid"
+     {% if polling %}hx-get="/api/workspace-grid" hx-trigger="every 10s" hx-swap="outerHTML"{% endif %}>
   {% for ws in workspaces %}
   <div class="ws-card health-{{ ws.health }}">
     <a href="/ws/{{ ws.name }}" class="ws-card-link" aria-label="{{ ws.name }}"></a>
@@ -11,6 +12,7 @@
               hx-post="/api/scan/ws/{{ ws.name }}"
               hx-target="#workspace-grid"
               hx-swap="outerHTML"
+
               onclick="event.stopPropagation()">
         Scan
       </button>
@@ -28,7 +30,7 @@
       {% elif ws.health == 'not-scanned' %}
       <span class="pill pill-m">Not Scanned</span>
       {% else %}
-      <span class="pill pill-m">Not Scanned</span>
+      <span class="pill pill-g">Clean</span>
       {% endif %}
       {% if ws.broken > 0 %}
         <span style="font-family:'Space Mono',monospace;font-size:13px;">{{ ws.broken }} / {{ ws.total }}</span>
