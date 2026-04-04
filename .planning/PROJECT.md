@@ -97,4 +97,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-04 — Phase 2 (QA Engine + Background) complete. Variable extraction, bad value detection, cache, background poller, and manual QA triggers all built and tested (82 tests passing).*
+*Last updated: 2026-04-04 — Phase 3 (Dashboard Views) complete. Full drill-down navigation: all-workspaces overview → workspace detail → campaign detail with per-variable breakdown and broken leads table. BrokenLeadDetail model, 3 new routes, 3 templates, HTMX pagination. 104 tests passing.*
