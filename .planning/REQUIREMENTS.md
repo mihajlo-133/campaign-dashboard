@@ -30,12 +30,12 @@
 
 ### QA Engine
 
-- [ ] **QA-01**: System extracts all `{{variableName}}` patterns from campaign sequence copy, excluding `{{RANDOM | ...}}` spin syntax and `{{accountSignature}}` (system variable)
-- [ ] **QA-02**: System matches extracted copy variables against `lead.payload` keys (case-sensitive)
-- [ ] **QA-03**: System flags leads where a copy-referenced variable is empty string
-- [ ] **QA-04**: System flags leads where a copy-referenced variable is null/missing
-- [ ] **QA-05**: System flags leads where a copy-referenced variable has the value "NO" (sentinel value from enrichment tools)
-- [ ] **QA-06**: System produces a per-campaign issue summary: count of broken leads grouped by variable name
+- [x] **QA-01**: System extracts all `{{variableName}}` patterns from campaign sequence copy, excluding `{{RANDOM | ...}}` spin syntax and `{{accountSignature}}` (system variable)
+- [x] **QA-02**: System matches extracted copy variables against `lead.payload` keys (case-sensitive)
+- [x] **QA-03**: System flags leads where a copy-referenced variable is empty string
+- [x] **QA-04**: System flags leads where a copy-referenced variable is null/missing
+- [x] **QA-05**: System flags leads where a copy-referenced variable has the value "NO" (sentinel value from enrichment tools)
+- [x] **QA-06**: System produces a per-campaign issue summary: count of broken leads grouped by variable name
 
 ### Dashboard Views
 
@@ -123,12 +123,12 @@
 | API-05 | Phase 1 | Complete |
 | API-06 | Phase 1 | Complete |
 | API-07 | Phase 1 | Complete |
-| QA-01 | Phase 2 | Pending |
-| QA-02 | Phase 2 | Pending |
-| QA-03 | Phase 2 | Pending |
-| QA-04 | Phase 2 | Pending |
-| QA-05 | Phase 2 | Pending |
-| QA-06 | Phase 2 | Pending |
+| QA-01 | Phase 2 | Complete |
+| QA-02 | Phase 2 | Complete |
+| QA-03 | Phase 2 | Complete |
+| QA-04 | Phase 2 | Complete |
+| QA-05 | Phase 2 | Complete |
+| QA-06 | Phase 2 | Complete |
 | VIEW-01 | Phase 3 | Pending |
 | VIEW-02 | Phase 3 | Pending |
 | VIEW-03 | Phase 3 | Pending |
