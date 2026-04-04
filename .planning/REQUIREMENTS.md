@@ -66,11 +66,11 @@
 
 ### UX & Visual Design
 
-- [ ] **UX-01**: Dashboard has polished, professional visual design (luxury aesthetic)
+- [x] **UX-01**: Dashboard has polished, professional visual design (luxury aesthetic)
 - [x] **UX-02**: UI is optimized for scanning hundreds/thousands of leads — clear data hierarchy, fast comprehension
 - [x] **UX-03**: Mobile-responsive layout (desktop-first, but usable on tablet/phone)
-- [ ] **UX-04**: Visual QA validated with Playwright screenshots at multiple viewports before shipping
-- [ ] **UX-05**: UX design expert agent consulted during frontend phases for evidence-based design review
+- [x] **UX-04**: Visual QA validated with Playwright screenshots at multiple viewports before shipping
+- [x] **UX-05**: UX design expert agent consulted during frontend phases for evidence-based design review
 
 ### Infrastructure
 
@@ -147,11 +147,11 @@
 | ADM-03 | Phase 1 | Complete |
 | ADM-04 | Phase 1 | Complete |
 | ADM-05 | Phase 1 | Complete |
-| UX-01 | Phase 4 | Pending |
+| UX-01 | Phase 4 | Complete |
 | UX-02 | Phase 3 | Complete |
 | UX-03 | Phase 3 | Complete |
-| UX-04 | Phase 4 | Pending |
-| UX-05 | Phase 4 | Pending |
+| UX-04 | Phase 4 | Complete |
+| UX-05 | Phase 4 | Complete |
 | INF-01 | Phase 1 | Complete |
 | INF-02 | Phase 1 | Complete |
 | INF-03 | Phase 1 | Complete |

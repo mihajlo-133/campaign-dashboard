@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Ready to execute
-stopped_at: Completed 04-01-PLAN.md (CSS design system refinement + UX audit)
-last_updated: "2026-04-04T16:51:59.721Z"
+stopped_at: Completed 04-02-PLAN.md (Playwright visual QA + interaction flow)
+last_updated: "2026-04-04T17:01:21.724Z"
 progress:
   total_phases: 4
   completed_phases: 3
   total_plans: 11
-  completed_plans: 9
+  completed_plans: 10
 ---
 
 # Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-04-04)
 ## Current Position
 
 Phase: 04 (ux-polish-deployment) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 
 ## Performance Metrics
 
@@ -55,6 +55,7 @@ Plan: 2 of 3
 | Phase 03 P02 | 5 | 2 tasks | 5 files |
 | Phase 03 P03 | 6 | 2 tasks | 3 files |
 | Phase 04 P01 | 5 | 2 tasks | 5 files |
+| Phase 04 P02 | 10 | 2 tasks | 14 files |
 
 ## Accumulated Context
 
@@ -85,6 +86,8 @@ Recent decisions affecting current work:
 - [Phase 03]: scan_campaign endpoint calls campaign_detail() handler directly — avoids duplicating template render logic
 - [Phase 03]: HTMX pagination targets #broken-leads-table (not #campaign-results) — allows page flip without losing variable summary block
 - [Phase 04]: WCAG AA compliance required structural color token darkening — tx3, green, amber all adjusted minimally to pass 4.5:1 for text use
+- [Phase 04]: HTMX scan endpoints must return partial templates to avoid nested page injection into outerHTML swap targets
+- [Phase 04]: Partial templates extracted to _workspace_grid.html and _campaign_table.html; shared via Jinja2 include from full-page templates
 
 ### Pending Todos
 
@@ -98,6 +101,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-04T16:51:59.719Z
-Stopped at: Completed 04-01-PLAN.md (CSS design system refinement + UX audit)
+Last session: 2026-04-04T17:01:21.722Z
+Stopped at: Completed 04-02-PLAN.md (Playwright visual QA + interaction flow)
 Resume file: None
