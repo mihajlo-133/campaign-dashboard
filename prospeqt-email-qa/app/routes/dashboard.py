@@ -77,7 +77,10 @@ def total_leads_for_workspace(ws) -> int:
 @router.get("/", response_class=HTMLResponse)
 async def dashboard(request: Request):
     """Overview page: all workspaces with health status. Per VIEW-01, D-04/D-05/D-06."""
+    from app.services.workspace import list_workspaces
     data = await get_cache().get_all()
+    # Build a set of workspace names that have cache data
+    cached_names = {ws.workspace_name for ws in data.workspaces}
     ws_display = []
     for ws in data.workspaces:
         ws_total = total_leads_for_workspace(ws)
@@ -92,6 +95,20 @@ async def dashboard(request: Request):
             "freshness_txt": freshness_text(ws.last_checked),
             "error": ws.error,
         })
+    # Show registered workspaces that have no cache data yet (not-scanned state)
+    for ws_info in list_workspaces():
+        if ws_info["name"] not in cached_names:
+            ws_display.append({
+                "name": ws_info["name"],
+                "broken": 0,
+                "total": 0,
+                "health": "not-scanned",
+                "pct": 0,
+                "campaign_count": 0,
+                "freshness_cls": "stale",
+                "freshness_txt": "Not scanned",
+                "error": None,
+            })
     return templates.TemplateResponse(request, "dashboard.html", {
         "workspaces": ws_display,
         "ws_count": len(ws_display),
