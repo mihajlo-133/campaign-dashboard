@@ -42,7 +42,7 @@
 - [ ] **VIEW-01**: All-workspaces overview — top-level entry point showing health status across all workspaces
 - [ ] **VIEW-02**: Workspace-level rollup — shows all campaigns in a workspace with their QA status
 - [ ] **VIEW-03**: Campaign-level summary — shows per-variable breakdown of broken lead counts
-- [ ] **VIEW-04**: Drill-down to per-lead issue list — shows which specific leads have broken variables (email + broken variable names + current values)
+- [x] **VIEW-04**: Drill-down to per-lead issue list — shows which specific leads have broken variables (email + broken variable names + current values)
 - [ ] **VIEW-05**: "Last checked" timestamp displayed per campaign to confirm data freshness
 - [ ] **VIEW-06**: Severity badges — visual distinction for campaigns with many broken leads vs few (e.g., color-coded thresholds)
 - [ ] **VIEW-07**: Three-level navigation: all workspaces → workspace → campaign → lead list
@@ -132,7 +132,7 @@
 | VIEW-01 | Phase 3 | Pending |
 | VIEW-02 | Phase 3 | Pending |
 | VIEW-03 | Phase 3 | Pending |
-| VIEW-04 | Phase 3 | Pending |
+| VIEW-04 | Phase 3 | Complete |
 | VIEW-05 | Phase 3 | Pending |
 | VIEW-06 | Phase 3 | Pending |
 | VIEW-07 | Phase 3 | Pending |
