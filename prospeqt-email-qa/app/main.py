@@ -1,3 +1,4 @@
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -6,6 +7,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
+from app.services.poller import discovery_poll
 from app.services.workspace import load_from_env
 
 _scheduler = AsyncIOScheduler()
@@ -20,8 +22,19 @@ async def lifespan(app: FastAPI):
     # Load workspace API keys from environment on startup
     load_from_env()
 
-    # Start scheduler (jobs will be added in Phase 2)
+    # Register background discovery poll job (per D-12, OPS-04)
+    poll_interval = int(os.getenv("QA_POLL_INTERVAL_SECONDS", "300"))
+    _scheduler.add_job(
+        discovery_poll,
+        "interval",
+        seconds=poll_interval,
+        id="discovery_poll",
+        replace_existing=True,
+    )
     _scheduler.start()
+
+    # Run initial discovery on startup so cache is pre-populated (per OPS-04)
+    await discovery_poll()
 
     yield
 
