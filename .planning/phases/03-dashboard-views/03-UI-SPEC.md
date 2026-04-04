@@ -21,7 +21,9 @@ created: 2026-04-04
 | Preset | not applicable |
 | Component library | none — hand-coded components matching existing base.html patterns |
 | Icon library | inline SVG only — no external icon library |
-| Font | Inter (400, 500, 600, 700) — already loaded from Google Fonts in base.html |
+| Font | Inter (400, 600) — already loaded from Google Fonts in base.html |
+
+**Active weights:** 400 (body, label, metadata) and 600 (subheading, heading, strong labels). Weights 500 and 700 are not used in Phase 3.
 
 **Source:** base.html design system — all new templates extend `base.html` and use its CSS custom properties.
 
@@ -44,7 +46,7 @@ Declared values (must be multiples of 4):
 Exceptions:
 - Topbar height is 64px (inherited from base.html — do not override)
 - Touch targets (scan buttons, pagination) must be minimum 44px tall (accessibility requirement from base.html `.gear-btn` pattern)
-- Traffic light dot: 10px diameter, no spacing token — explicit `width: 10px; height: 10px`
+- Traffic light dot: **10px diameter** — explicit `width: 10px; height: 10px`. Not a spacing-scale value. Exception justified: 8px renders too small to read health status at a glance at this scale; 12px overweights the dot relative to the accompanying text. 10px is the visual sweet spot for inline status indicators.
 
 ---
 
@@ -53,10 +55,9 @@ Exceptions:
 | Role | Size | Weight | Line Height | Usage |
 |------|------|--------|-------------|-------|
 | Body | 14px | 400 | 1.5 | Table cell text, card metadata, description text — base.html default |
-| Label | 13px | 500 | 1.4 | Column headers, section labels, badge text, breadcrumb segments, timestamp values |
+| Label | 13px | 400 | 1.4 | Column headers, section labels, badge text, breadcrumb segments, timestamp values |
 | Subheading | 16px | 600 | 1.4 | Card workspace names, campaign names in rows, variable names in summary block |
 | Heading | 20px | 600 | 1.3 | Page title (e.g. "Enavra workspace" on `/ws/{name}`) |
-| Display | 28px | 700 | 1.2 | Not used in Phase 3 — defer to Phase 4 polish |
 
 All text uses `color: var(--tx1)` for primary content, `color: var(--tx2)` for secondary/metadata.
 
@@ -68,12 +69,13 @@ All text uses `color: var(--tx1)` for primary content, `color: var(--tx2)` for s
 |------|-------|-------|
 | Dominant (60%) | `#f5f5f7` (`--bg`) | Page background, outside-card space |
 | Secondary (30%) | `#ffffff` (`--bg-el`) | Cards, topbar, table rows, breadcrumb bar |
-| Accent (10%) | `#2756f7` (`--blue`) | Scan buttons (primary action), active pagination page number |
+| Accent (10%) | `#2756f7` (`--blue`) | Scan buttons (primary action), active pagination page number, breadcrumb navigation links |
 | Destructive | `#c33939` (`--red`) | Red traffic light dot for >10% broken, broken variable values in table, error state text |
 
 Accent (`--blue`) reserved for:
 - "Scan" / "Scan All" call-to-action buttons (primary button fill)
 - Active pagination page indicator (filled background or underline)
+- Breadcrumb navigation links (inactive segments that link to parent pages)
 
 **Health status colors (traffic light system — D-08/D-09):**
 
@@ -123,7 +125,7 @@ Layout: white card (`--bg-el`), `--sh` shadow, `8px` border-radius, `24px` paddi
 
 Content layout (top to bottom):
 1. Row: `[traffic-light-dot] [workspace name at 16px/600]` + right-aligned `[Scan button]`
-2. Row: broken percentage + raw count (e.g. `3.2% broken (12 / 375 leads)`) — 13px/500, `--tx2`
+2. Row: broken percentage + raw count (e.g. `3.2% broken (12 / 375 leads)`) — 13px/400, `--tx2`
 3. Row: campaign count — 13px/400, `--tx2` (e.g. `4 campaigns`)
 4. Row: freshness timestamp — 13px/400, freshness color (e.g. `Last checked 3 min ago`)
 
@@ -135,8 +137,8 @@ Layout: table-style rows inside a white card. Each row:
 
 Columns:
 1. `[dot] Campaign name` — 14px/600, `--tx1`; dot uses health threshold logic
-2. Status badge — `Active` (green pill) or `Draft` (gray pill) — 12px/500
-3. Broken leads — `3.2% (12/375)` — 14px/500; red if >0, green if 0
+2. Status badge — `Active` (green pill) or `Draft` (gray pill) — 13px/600
+3. Broken leads — `3.2% (12/375)` — 14px/400; red if >0, green if 0
 4. Variables affected — `cityName, niche` — 13px/400, `--tx2`; truncated at 2 names + `+N more`
 5. Last checked — freshness color, 13px/400
 6. Actions — `[Scan]` button
@@ -151,7 +153,7 @@ Row is a link to `/ws/{name}/campaign/{id}`.
 White card, 24px padding. Heading: `Variable Issues` (16px/600).
 
 Each variable row:
-- Variable name in backtick-style label: `cityName` (13px/500, `--tx1`)
+- Variable name in backtick-style label: `cityName` (13px/400, `--tx1`)
 - Count: `12 leads broken` (13px/400, `--tx2`)
 - Visual bar: thin gray background bar with red fill proportional to `count / total_leads` — 4px height, 8px border-radius
 - Sorted: most broken first
@@ -163,7 +165,7 @@ White card. Heading: `Broken Leads` (16px/600) + lead count badge.
 Columns:
 1. `Email` — 14px/400, `--tx1`
 2. `Broken Variables` — shows each broken variable and value: `cityName: [empty]` or `niche: NO` — 13px/400; variable name in `--tx2`, value in `--red`
-3. `Lead Status` — text badge: `Active`, `Contacted`, `Bounced` — 12px/500
+3. `Lead Status` — text badge: `Active`, `Contacted`, `Bounced` — 13px/600
 
 Pagination: 25 leads per page. Classic numbered pagination: `← 1 2 3 4 5 →`. Active page: filled `--blue` background, white text. Other pages: `--bg-el`, `--tx1` text.
 
@@ -171,7 +173,7 @@ Pagination: 25 leads per page. Classic numbered pagination: `← 1 2 3 4 5 →`.
 
 Positioned at top of page content area, 16px vertical padding, white background (`--bg-el`), border-bottom `1px solid var(--bd)`.
 
-Content: `All Workspaces > Enavra > Campaign A` — each segment at 13px/500. Inactive segments: `--blue`, underline on hover. Current page segment: `--tx1`, not a link.
+Content: `All Workspaces > Enavra > Campaign A` — each segment at 13px/400. Inactive segments: `--blue` color, underline on hover. Current page segment: `--tx1`, not a link.
 
 Separator: ` > ` at `--tx3` color.
 
@@ -198,7 +200,7 @@ Hover: `background: var(--blue-h)`.
 background: var(--bg-el)
 color: var(--tx1)
 font-size: 13px
-font-weight: 500
+font-weight: 400
 padding: 8px 12px
 border-radius: 8px
 border: 1px solid var(--bd)
@@ -221,7 +223,9 @@ Active:  background rgba(26,138,62,0.12); color var(--green); border 1px solid r
 Draft:   background rgba(107,107,107,0.1); color var(--tx2); border 1px solid var(--bd)
 ```
 
-Font: 11px/600. Padding: 2px 8px. Border-radius: 12px.
+Font: 13px/600. Padding: 4px 8px. Border-radius: 12px.
+
+The pill shape (border-radius: 12px) and colored background provide sufficient visual differentiation without requiring a distinct font size. Using 13px (Label size) keeps the typography table at 4 declared sizes.
 
 ---
 
