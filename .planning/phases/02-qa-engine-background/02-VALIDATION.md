@@ -2,7 +2,7 @@
 phase: 2
 slug: qa-engine-background
 status: draft
-nyquist_compliant: false
+nyquist_compliant: true
 wave_0_complete: false
 created: 2026-04-04
 ---
@@ -45,9 +45,9 @@ created: 2026-04-04
 | 02-01-05 | 01 | 1 | QA-05 | unit | `pytest tests/test_qa_engine.py -k broken_count` | ❌ W0 | ⬜ pending |
 | 02-02-01 | 02 | 1 | OPS-01 | unit | `pytest tests/test_poller.py -k schedule` | ❌ W0 | ⬜ pending |
 | 02-02-02 | 02 | 1 | OPS-02 | unit | `pytest tests/test_poller.py -k error_isolation` | ❌ W0 | ⬜ pending |
-| 02-02-03 | 02 | 1 | OPS-03 | unit | `pytest tests/test_cache.py -k ttl` | ❌ W0 | ⬜ pending |
-| 02-03-01 | 03 | 2 | QA-06 | integration | `pytest tests/test_qa_integration.py -k manual_trigger` | ❌ W0 | ⬜ pending |
-| 02-03-02 | 03 | 2 | OPS-04 | integration | `pytest tests/test_qa_integration.py -k workspace_scan` | ❌ W0 | ⬜ pending |
+| 02-02-03 | 02 | 2 | OPS-03 | unit | `pytest tests/test_poller.py -k trigger_campaign` | ❌ W0 | ⬜ pending |
+| 02-02-04 | 02 | 2 | QA-06 | unit | `pytest tests/test_poller.py -k trigger_all` | ❌ W0 | ⬜ pending |
+| 02-02-05 | 02 | 2 | OPS-04 | unit | `pytest tests/test_poller.py -k trigger_workspace` | ❌ W0 | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -57,8 +57,7 @@ created: 2026-04-04
 
 - [ ] `prospeqt-email-qa/tests/test_qa_engine.py` — stubs for QA-01 through QA-06
 - [ ] `prospeqt-email-qa/tests/test_poller.py` — stubs for OPS-01 through OPS-03
-- [ ] `prospeqt-email-qa/tests/test_cache.py` — stubs for OPS-03
-- [ ] `prospeqt-email-qa/tests/test_qa_integration.py` — stubs for QA-06, OPS-04
+- [ ] `prospeqt-email-qa/tests/test_cache.py` — stubs for cache locking and concurrent access
 - [ ] `prospeqt-email-qa/tests/fixtures/campaign_with_variables.json` — mock campaign with various variable patterns
 - [ ] `prospeqt-email-qa/tests/fixtures/leads_with_broken_vars.json` — mock leads with empty/null/"NO" values
 
