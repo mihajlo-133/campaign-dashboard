@@ -66,7 +66,7 @@ Plans:
 
 Plans:
 - [x] 03-01-PLAN.md — Extend QA model with BrokenLeadDetail for per-lead drill-down
-- [ ] 03-02-PLAN.md — Overview page (workspace cards) and workspace detail page (campaign table)
+- [x] 03-02-PLAN.md — Overview page (workspace cards) and workspace detail page (campaign table)
 - [ ] 03-03-PLAN.md — Campaign detail page with variable summary, broken leads table, pagination
 
 ### Phase 4: UX Polish + Deployment
@@ -90,5 +90,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 |-------|----------------|--------|-----------|
 | 1. API Foundation | 3/3 | Complete   | 2026-04-04 |
 | 2. QA Engine + Background | 2/2 | Complete | 2026-04-04 |
-| 3. Dashboard Views | 1/3 | In Progress|  |
+| 3. Dashboard Views | 2/3 | In Progress|  |
 | 4. UX Polish + Deployment | 0/TBD | Not started | - |
