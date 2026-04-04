@@ -1,32 +1,127 @@
 {% extends "base.html" %}
-
-{% block title %}Email QA Dashboard{% endblock %}
+{% block title %}Email QA — Overview{% endblock %}
 
 {% block extra_styles %}
 <style>
-  .dashboard-shell {
-    max-width: 1200px;
-    margin: 0 auto;
+  .page-header {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 48px;
+  }
+  .page-title { font-size: 20px; font-weight: 600; color: var(--tx1); }
+  .page-count { font-size: 14px; color: var(--tx2); }
+
+  /* Workspace card grid — 3 col desktop, 2 col tablet, 1 col mobile per UI-SPEC */
+  .ws-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    align-items: stretch;
+  }
+  @media (max-width: 1023px) {
+    .ws-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 767px) {
+    .ws-grid { grid-template-columns: 1fr; }
+  }
+
+  /* Workspace card per UI-SPEC */
+  .ws-card {
+    background: var(--bg-el);
+    border-radius: 8px;
+    box-shadow: var(--sh);
     padding: 24px;
+    text-decoration: none;
+    color: inherit;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    transition: box-shadow 0.15s;
+    position: relative;
   }
-
-  .dashboard-title {
-    font-size: 18px;
+  .ws-card:hover { box-shadow: var(--sh-md); }
+  .ws-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .ws-card-name {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 16px;
     font-weight: 600;
-    color: var(--tx1);
-    margin-bottom: 16px;
   }
+  .ws-card-meta { font-size: 13px; color: var(--tx2); line-height: 1.4; }
+  .ws-card-link {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+  }
+  .ws-card .scan-btn-secondary { position: relative; z-index: 2; }
 
-  .placeholder-text {
-    font-size: 14px;
+  /* Empty state */
+  .empty-state {
+    text-align: center;
+    padding: 64px 24px;
     color: var(--tx2);
   }
+  .empty-state h2 { font-size: 18px; font-weight: 600; color: var(--tx1); margin-bottom: 8px; }
+  .empty-state p { font-size: 14px; margin-bottom: 16px; }
+  .empty-state a { color: var(--blue); text-decoration: none; }
+  .empty-state a:hover { text-decoration: underline; }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="dashboard-shell">
-  <h1 class="dashboard-title">Email QA Dashboard</h1>
-  <p class="placeholder-text">QA results will appear here after Phase 2 and Phase 3 are complete.</p>
+<div class="page-shell">
+  <div class="page-header">
+    <h1 class="page-title">Workspaces</h1>
+    <span class="page-count">{{ ws_count }} workspace{{ 's' if ws_count != 1 else '' }}</span>
+  </div>
+
+  {% if workspaces %}
+  <div class="ws-grid" id="workspace-grid">
+    {% for ws in workspaces %}
+    <div class="ws-card">
+      <a href="/ws/{{ ws.name }}" class="ws-card-link" aria-label="{{ ws.name }}"></a>
+      <div class="ws-card-header">
+        <div class="ws-card-name">
+          <span class="health-dot health-dot--{{ ws.health }}"></span>
+          {{ ws.name }}
+        </div>
+        <button class="scan-btn-secondary"
+                hx-post="/api/scan/ws/{{ ws.name }}"
+                hx-target="#workspace-grid"
+                hx-swap="outerHTML"
+                onclick="event.stopPropagation()">
+          Scan
+        </button>
+      </div>
+      {% if ws.error %}
+      <div class="ws-card-meta" style="color: var(--red);">{{ ws.error }}</div>
+      {% else %}
+      <div class="ws-card-meta">
+        {% if ws.broken > 0 %}
+          {{ ws.pct }} broken ({{ ws.broken }} / {{ ws.total }} leads)
+        {% else %}
+          Clean
+        {% endif %}
+      </div>
+      <div class="ws-card-meta">{{ ws.campaign_count }} campaign{{ 's' if ws.campaign_count != 1 else '' }}</div>
+      {% endif %}
+      <div class="ws-card-meta freshness freshness--{{ ws.freshness_cls }}">{{ ws.freshness_txt }}</div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state" id="workspace-grid">
+    <h2>No workspaces configured</h2>
+    <p>Add your first Instantly workspace in settings to start QA checking.</p>
+    <a href="/admin">Open Settings</a>
+  </div>
+  {% endif %}
 </div>
 {% endblock %}
