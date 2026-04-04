@@ -43,10 +43,10 @@ def create_app() -> FastAPI:
     if static_dir.exists():
         application.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
-    # Register routers (Phase 2+)
-    # from app.routes import dashboard, admin
-    # application.include_router(dashboard.router)
-    # application.include_router(admin.router)
+    # Register routers
+    from app.routes import admin, dashboard
+    application.include_router(dashboard.router)
+    application.include_router(admin.router)
 
     return application
 
