@@ -50,7 +50,7 @@ Plans:
 
 Plans:
 - [x] 02-01-PLAN.md — QA models, variable extraction, lead flagging, per-campaign/workspace QA runner (TDD)
-- [ ] 02-02-PLAN.md — Cache layer, background poller, manual triggers, lifespan wiring
+- [x] 02-02-PLAN.md — Cache layer, background poller, manual triggers, lifespan wiring
 
 ### Phase 3: Dashboard Views
 **Goal**: GTM engineers can navigate from all-workspaces overview to per-lead issue detail and understand exactly which leads need fixing
