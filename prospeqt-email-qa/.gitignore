@@ -37,3 +37,9 @@ htmlcov/
 # Distribution / packaging
 *.tar.gz
 *.whl
+
+# QA screenshots (generated during testing)
+qa/screenshots/*.png
+
+# Playwright CLI session files
+.playwright-cli/
