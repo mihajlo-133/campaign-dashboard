@@ -29,7 +29,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. App fetches campaigns from all configured workspaces, filtering to status=0 (draft) and status=1 (active) only
   4. App fetches all active leads (status=1) from a campaign using cursor pagination with no leads missed
   5. Lead variables are read from `lead.payload` dict and sequence copy is parsed from inline `campaign.sequences[].steps[].variants[].body/subject`
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — Project scaffold, config, workspace registry, test infrastructure
+- [ ] 01-02-PLAN.md — Instantly v2 async API client with pagination, filtering, rate limiting
+- [ ] 01-03-PLAN.md — Admin panel routes, auth, templates (UI-SPEC), integration tests
 
 ### Phase 2: QA Engine + Background
 **Goal**: The system continuously checks all active campaigns for broken variables and makes results available in-memory with no API blocking
@@ -62,7 +67,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Requirements**: UX-01, UX-04, UX-05
 **Success Criteria** (what must be TRUE):
   1. Dashboard passes a UX design expert review: clear data hierarchy, luxury aesthetic, scannable at a glance — no critical design issues outstanding
-  2. Playwright screenshots at desktop (1440×900), tablet (768×1024), and mobile (375×812) show no broken layouts or overflowing elements
+  2. Playwright screenshots at desktop (1440x900), tablet (768x1024), and mobile (375x812) show no broken layouts or overflowing elements
   3. All 6 Prospeqt client workspaces are configured and the dashboard is live at a Render URL accessible to the team
   4. Manual "run check" user flow completes successfully in a Playwright end-to-end test (click trigger → loading state → results update)
 **Plans**: TBD
@@ -75,7 +80,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. API Foundation | 0/TBD | Not started | - |
+| 1. API Foundation | 0/3 | Planning complete | - |
 | 2. QA Engine + Background | 0/TBD | Not started | - |
 | 3. Dashboard Views | 0/TBD | Not started | - |
 | 4. UX Polish + Deployment | 0/TBD | Not started | - |
