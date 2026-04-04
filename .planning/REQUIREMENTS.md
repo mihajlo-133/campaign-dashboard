@@ -20,13 +20,13 @@
 
 ### API Integration
 
-- [ ] **API-01**: System fetches all campaigns from configured Instantly workspaces via v2 API
-- [ ] **API-02**: System filters campaigns by status — only active (status=1) and draft (status=0) campaigns are shown; paused (status=2) and completed (status=3) are excluded
-- [ ] **API-03**: System extracts sequence copy from inline `campaign.sequences[].steps[].variants[].body` and `.subject` fields (no separate API call needed)
-- [ ] **API-04**: System fetches all leads from filtered campaigns via POST `/api/v2/leads/list` endpoint with cursor pagination
-- [ ] **API-05**: System filters leads to active-only using lead `status` field (status=1 is active; exclude status=3 completed, status=-1 bounced/error)
-- [ ] **API-06**: System reads lead variables from `lead.payload` dict (key-value pairs attached to each lead)
-- [ ] **API-07**: System respects Instantly rate limits (100 req/sec, 6000 req/min per workspace) with per-workspace throttling
+- [x] **API-01**: System fetches all campaigns from configured Instantly workspaces via v2 API
+- [x] **API-02**: System filters campaigns by status — only active (status=1) and draft (status=0) campaigns are shown; paused (status=2) and completed (status=3) are excluded
+- [x] **API-03**: System extracts sequence copy from inline `campaign.sequences[].steps[].variants[].body` and `.subject` fields (no separate API call needed)
+- [x] **API-04**: System fetches all leads from filtered campaigns via POST `/api/v2/leads/list` endpoint with cursor pagination
+- [x] **API-05**: System filters leads to active-only using lead `status` field (status=1 is active; exclude status=3 completed, status=-1 bounced/error)
+- [x] **API-06**: System reads lead variables from `lead.payload` dict (key-value pairs attached to each lead)
+- [x] **API-07**: System respects Instantly rate limits (100 req/sec, 6000 req/min per workspace) with per-workspace throttling
 
 ### QA Engine
 
@@ -116,13 +116,13 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| API-01 | Phase 1 | Pending |
-| API-02 | Phase 1 | Pending |
-| API-03 | Phase 1 | Pending |
-| API-04 | Phase 1 | Pending |
-| API-05 | Phase 1 | Pending |
-| API-06 | Phase 1 | Pending |
-| API-07 | Phase 1 | Pending |
+| API-01 | Phase 1 | Complete |
+| API-02 | Phase 1 | Complete |
+| API-03 | Phase 1 | Complete |
+| API-04 | Phase 1 | Complete |
+| API-05 | Phase 1 | Complete |
+| API-06 | Phase 1 | Complete |
+| API-07 | Phase 1 | Complete |
 | QA-01 | Phase 2 | Pending |
 | QA-02 | Phase 2 | Pending |
 | QA-03 | Phase 2 | Pending |
