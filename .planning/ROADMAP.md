@@ -46,7 +46,11 @@ Plans:
   3. Background poller runs on schedule, populates the in-memory cache, survives individual API errors without dying, and updates a last-refresh timestamp
   4. Manual "run check" at all-workspaces, workspace, and campaign level triggers an immediate cache refresh and returns within a reasonable time
   5. When background poller encounters an error on one workspace, other workspaces continue refreshing normally
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 02-01-PLAN.md — QA models, variable extraction, lead flagging, per-campaign/workspace QA runner (TDD)
+- [ ] 02-02-PLAN.md — Cache layer, background poller, manual triggers, lifespan wiring
 
 ### Phase 3: Dashboard Views
 **Goal**: GTM engineers can navigate from all-workspaces overview to per-lead issue detail and understand exactly which leads need fixing
@@ -81,6 +85,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. API Foundation | 3/3 | Complete   | 2026-04-04 |
-| 2. QA Engine + Background | 0/TBD | Not started | - |
+| 2. QA Engine + Background | 0/2 | Not started | - |
 | 3. Dashboard Views | 0/TBD | Not started | - |
 | 4. UX Polish + Deployment | 0/TBD | Not started | - |
