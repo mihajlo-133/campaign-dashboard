@@ -58,10 +58,10 @@
 
 ### Admin & Access
 
-- [ ] **ADM-01**: Admin panel to add new Instantly workspaces by providing workspace name + API key
-- [ ] **ADM-02**: Admin panel to remove existing workspaces
-- [ ] **ADM-03**: Admin panel protected by simple password authentication
-- [ ] **ADM-04**: QA viewing is open access — no login required to see results
+- [x] **ADM-01**: Admin panel to add new Instantly workspaces by providing workspace name + API key
+- [x] **ADM-02**: Admin panel to remove existing workspaces
+- [x] **ADM-03**: Admin panel protected by simple password authentication
+- [x] **ADM-04**: QA viewing is open access — no login required to see results
 - [x] **ADM-05**: API keys stored server-side with file-based persistence (survives app restarts, supports runtime add/remove)
 
 ### UX & Visual Design
@@ -142,10 +142,10 @@
 | OPS-04 | Phase 2 | Pending |
 | OPS-05 | Phase 2 | Pending |
 | OPS-06 | Phase 2 | Pending |
-| ADM-01 | Phase 1 | Pending |
-| ADM-02 | Phase 1 | Pending |
-| ADM-03 | Phase 1 | Pending |
-| ADM-04 | Phase 1 | Pending |
+| ADM-01 | Phase 1 | Complete |
+| ADM-02 | Phase 1 | Complete |
+| ADM-03 | Phase 1 | Complete |
+| ADM-04 | Phase 1 | Complete |
 | ADM-05 | Phase 1 | Complete |
 | UX-01 | Phase 4 | Pending |
 | UX-02 | Phase 3 | Pending |

@@ -12,7 +12,7 @@ Four phases from scaffold to ship. Phase 1 builds the Instantly API client and a
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: API Foundation** - Instantly v2 client, workspace admin panel, project scaffold
+- [x] **Phase 1: API Foundation** - Instantly v2 client, workspace admin panel, project scaffold (completed 2026-04-04)
 - [ ] **Phase 2: QA Engine + Background** - Variable extraction, lead flagging, cache, background poller
 - [ ] **Phase 3: Dashboard Views** - All-workspaces, workspace, campaign, and per-lead UI
 - [ ] **Phase 4: UX Polish + Deployment** - Visual design, Playwright QA, Render deployment
@@ -34,7 +34,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 Plans:
 - [x] 01-01-PLAN.md — Project scaffold, config, workspace registry, test infrastructure
 - [x] 01-02-PLAN.md — Instantly v2 async API client with pagination, filtering, rate limiting
-- [ ] 01-03-PLAN.md — Admin panel routes, auth, templates (UI-SPEC), integration tests
+- [x] 01-03-PLAN.md — Admin panel routes, auth, templates (UI-SPEC), integration tests
 
 ### Phase 2: QA Engine + Background
 **Goal**: The system continuously checks all active campaigns for broken variables and makes results available in-memory with no API blocking
@@ -80,7 +80,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. API Foundation | 2/3 | In Progress|  |
+| 1. API Foundation | 3/3 | Complete   | 2026-04-04 |
 | 2. QA Engine + Background | 0/TBD | Not started | - |
 | 3. Dashboard Views | 0/TBD | Not started | - |
 | 4. UX Polish + Deployment | 0/TBD | Not started | - |
