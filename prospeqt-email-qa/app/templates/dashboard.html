@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}Email QA Dashboard{% endblock %}
+
+{% block extra_styles %}
+<style>
+  .dashboard-shell {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 24px;
+  }
+
+  .dashboard-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--tx1);
+    margin-bottom: 16px;
+  }
+
+  .placeholder-text {
+    font-size: 14px;
+    color: var(--tx2);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-shell">
+  <h1 class="dashboard-title">Email QA Dashboard</h1>
+  <p class="placeholder-text">QA results will appear here after Phase 2 and Phase 3 are complete.</p>
+</div>
+{% endblock %}
