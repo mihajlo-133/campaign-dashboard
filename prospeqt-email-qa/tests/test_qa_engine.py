@@ -249,6 +249,51 @@ def test_global_qa_result_model():
 
 
 # ---------------------------------------------------------------------------
+# BrokenLeadDetail model and CampaignQAResult.broken_leads — VIEW-04
+# ---------------------------------------------------------------------------
+
+
+def test_broken_lead_detail_model():
+    """BrokenLeadDetail stores email, lead_status, and broken_vars."""
+    from app.models.qa import BrokenLeadDetail
+    detail = BrokenLeadDetail(
+        email="test@example.com",
+        lead_status=1,
+        broken_vars={"cityName": "", "firstName": None},
+    )
+    assert detail.email == "test@example.com"
+    assert detail.lead_status == 1
+    assert detail.broken_vars["cityName"] == ""
+    assert detail.broken_vars["firstName"] is None
+
+
+def test_campaign_qa_result_broken_leads_default():
+    """CampaignQAResult.broken_leads defaults to empty list (backward compatible)."""
+    result = CampaignQAResult(
+        campaign_id="c-test",
+        campaign_name="Test",
+        total_leads=5,
+        broken_count=0,
+    )
+    assert result.broken_leads == []
+
+
+def test_campaign_qa_result_broken_leads_populated():
+    """CampaignQAResult.broken_leads stores BrokenLeadDetail objects."""
+    from app.models.qa import BrokenLeadDetail
+    detail = BrokenLeadDetail(email="x@y.com", lead_status=1, broken_vars={"a": ""})
+    result = CampaignQAResult(
+        campaign_id="c-test",
+        campaign_name="Test",
+        total_leads=5,
+        broken_count=1,
+        broken_leads=[detail],
+    )
+    assert len(result.broken_leads) == 1
+    assert result.broken_leads[0].email == "x@y.com"
+
+
+# ---------------------------------------------------------------------------
 # check_lead — QA-02, QA-04
 # ---------------------------------------------------------------------------
 

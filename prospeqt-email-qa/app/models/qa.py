@@ -10,6 +10,14 @@ from datetime import datetime
 from pydantic import BaseModel
 
 
+class BrokenLeadDetail(BaseModel):
+    """Per-lead broken variable detail for drill-down view (VIEW-04)."""
+
+    email: str
+    lead_status: int  # Raw integer status from Instantly API
+    broken_vars: dict[str, str | None]  # {varName: currentValue} — value is "" for empty, None for missing, "NO" for sentinel
+
+
 class CampaignQAResult(BaseModel):
     """QA result for a single campaign. Shape per D-08."""
 
@@ -19,6 +27,7 @@ class CampaignQAResult(BaseModel):
     broken_count: int  # Distinct count of leads with at least one broken variable
     issues_by_variable: dict[str, int] = {}  # {varName: broken_lead_count}
     last_checked: datetime | None = None
+    broken_leads: list[BrokenLeadDetail] = []  # Per-lead detail for VIEW-04
 
 
 class WorkspaceQAResult(BaseModel):
