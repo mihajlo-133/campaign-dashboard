@@ -16,10 +16,17 @@ from app.services.workspace import (
 
 @pytest.fixture(autouse=True)
 def reset_registry():
-    """Clear the in-memory registry before and after each test for isolation."""
+    """Clear the in-memory registry and any leaked env vars before and after each test."""
     ws_module._registry.clear()
+    # Clean up any WORKSPACE_*_API_KEY env vars leaked from other test modules
+    leaked = [k for k in os.environ if k.startswith("WORKSPACE_") and k.endswith("_API_KEY")]
+    for k in leaked:
+        del os.environ[k]
     yield
     ws_module._registry.clear()
+    leaked = [k for k in os.environ if k.startswith("WORKSPACE_") and k.endswith("_API_KEY")]
+    for k in leaked:
+        del os.environ[k]
 
 
 def test_load_from_env_reads_workspace_vars(mock_env):
