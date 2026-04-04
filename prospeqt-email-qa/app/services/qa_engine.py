@@ -13,7 +13,7 @@ from typing import FrozenSet
 
 import httpx
 
-from app.models.qa import CampaignQAResult, WorkspaceQAResult
+from app.models.qa import BrokenLeadDetail, CampaignQAResult, WorkspaceQAResult
 
 logger = logging.getLogger(__name__)
 
@@ -125,6 +125,7 @@ async def run_campaign_qa(
 
     issues_by_variable: dict[str, int] = {}
     broken_lead_ids: set[str] = set()
+    broken_lead_details: list[BrokenLeadDetail] = []
 
     for lead in leads:
         payload = lead.get("payload") or {}
@@ -134,6 +135,12 @@ async def run_campaign_qa(
             broken_lead_ids.add(lead.get("id", lead.get("email", "")))
             for var_name in broken_vars:
                 issues_by_variable[var_name] = issues_by_variable.get(var_name, 0) + 1
+            # Capture per-lead detail for VIEW-04 drill-down
+            broken_lead_details.append(BrokenLeadDetail(
+                email=lead.get("email", ""),
+                lead_status=lead.get("status", 0),
+                broken_vars={v: payload.get(v) for v in broken_vars},
+            ))
 
     return CampaignQAResult(
         campaign_id=campaign["id"],
@@ -141,6 +148,7 @@ async def run_campaign_qa(
         total_leads=len(leads),
         broken_count=len(broken_lead_ids),
         issues_by_variable=issues_by_variable,
+        broken_leads=broken_lead_details,
         last_checked=datetime.now(timezone.utc),
     )
 

@@ -12,7 +12,7 @@ import pytest
 import respx
 
 from app.api.instantly import INSTANTLY_BASE
-from app.models.qa import CampaignQAResult, GlobalQAResult, WorkspaceQAResult
+from app.models.qa import BrokenLeadDetail, CampaignQAResult, GlobalQAResult, WorkspaceQAResult
 from app.services.qa_engine import (
     check_lead,
     extract_variables,
@@ -451,6 +451,93 @@ async def test_run_campaign_qa_no_issues():
 
     assert result.broken_count == 0
     assert result.issues_by_variable == {}
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_run_campaign_qa_broken_leads_captured():
+    """run_campaign_qa populates broken_leads with per-lead detail."""
+    fixture = load_fixture("qa_campaign_fixture.json")
+    campaign = fixture["campaign"]
+
+    respx.post(f"{INSTANTLY_BASE}/leads/list").mock(
+        return_value=httpx.Response(
+            200,
+            json={"items": fixture["leads"], "next_starting_after": None},
+        )
+    )
+
+    async with httpx.AsyncClient() as client:
+        result = await run_campaign_qa(client, "test-api-key", campaign, "test-ws")
+
+    # 2 broken leads: lead-002 (empty cityName), lead-003 (NO firstName)
+    assert len(result.broken_leads) == 2
+    emails = {bl.email for bl in result.broken_leads}
+    assert "broken-city@example.com" in emails
+    assert "broken-name@example.com" in emails
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_run_campaign_qa_broken_leads_detail_values():
+    """broken_leads entries contain correct broken_vars with actual values."""
+    fixture = load_fixture("qa_campaign_fixture.json")
+    campaign = fixture["campaign"]
+
+    respx.post(f"{INSTANTLY_BASE}/leads/list").mock(
+        return_value=httpx.Response(
+            200,
+            json={"items": fixture["leads"], "next_starting_after": None},
+        )
+    )
+
+    async with httpx.AsyncClient() as client:
+        result = await run_campaign_qa(client, "test-api-key", campaign, "test-ws")
+
+    # Find the lead with empty cityName
+    city_lead = next(bl for bl in result.broken_leads if bl.email == "broken-city@example.com")
+    assert city_lead.lead_status == 1
+    assert "cityName" in city_lead.broken_vars
+    assert city_lead.broken_vars["cityName"] == ""
+
+    # Find the lead with NO firstName
+    name_lead = next(bl for bl in result.broken_leads if bl.email == "broken-name@example.com")
+    assert name_lead.lead_status == 1
+    assert "firstName" in name_lead.broken_vars
+    assert name_lead.broken_vars["firstName"] == "NO"
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_run_campaign_qa_broken_leads_empty_when_clean():
+    """All leads clean -> broken_leads is empty list."""
+    fixture = load_fixture("qa_campaign_fixture.json")
+    campaign = fixture["campaign"]
+    clean_leads = [
+        {
+            "id": "clean-001",
+            "email": "clean@example.com",
+            "status": 1,
+            "payload": {
+                "firstName": "Alice",
+                "companyName": "Acme Corp",
+                "cityName": "New York",
+                "spacedVar": "value",
+            },
+        }
+    ]
+
+    respx.post(f"{INSTANTLY_BASE}/leads/list").mock(
+        return_value=httpx.Response(
+            200,
+            json={"items": clean_leads, "next_starting_after": None},
+        )
+    )
+
+    async with httpx.AsyncClient() as client:
+        result = await run_campaign_qa(client, "test-api-key", campaign, "test-ws")
+
+    assert result.broken_leads == []
 
 
 def test_case_sensitive_match():
