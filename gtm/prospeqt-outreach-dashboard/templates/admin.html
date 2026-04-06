@@ -4,7 +4,7 @@
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>Dashboard Admin</title>
 <style>
-:root{--bg:#0c0c0e;--bg-el:#161618;--bg-hov:#1f1f22;--bd:#2a2a2e;--bd-s:#3a3a3e;--tx1:#f0f0f0;--tx2:#909090;--tx3:#7a7a7e;--blue:#2756f7;--blue-bg:rgba(39,86,247,.15);--green:#34C759;--amber:#f59e0b;--red:#C33939;--sh:0 4px 12px rgba(0,0,0,.3)}
+:root{--bg:#FFFFFF;--bg-alt:#F8FAFC;--bg-el:#FFFFFF;--bg-hov:#F8FAFC;--bd:#E2E8F0;--bd-s:#CBD5E1;--tx1:#0F172A;--tx2:#475569;--tx3:#94A3B8;--blue:#2563EB;--blue-bg:rgba(37,99,235,.1);--green:#22C55E;--green-text:#16A34A;--amber:#F59E0B;--amber-text:#D97706;--red:#EF4444;--red-text:#DC2626;--sh:0 4px 6px -1px rgba(0,0,0,.1),0 2px 4px -2px rgba(0,0,0,.1)}
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:var(--bg);color:var(--tx1);font-family:'Inter',system-ui,sans-serif;font-size:14px;line-height:1.5;padding:24px}
 .shell{max-width:1100px;margin:0 auto}
@@ -19,7 +19,7 @@ th{font-size:11px;font-weight:600;color:var(--tx3);text-transform:uppercase;lett
 th.num{text-align:right}
 td{padding:8px 12px;border-bottom:1px solid var(--bd);vertical-align:middle}
 tr:last-child td{border-bottom:none}
-tr:nth-child(even) td{background:rgba(255,255,255,.015)}
+tr:nth-child(even) td{background:rgba(0,0,0,.015)}
 .td-label{color:var(--tx2);font-size:13px}
 input[type=number]{background:var(--bg);border:1px solid var(--bd);border-radius:6px;color:var(--tx1);font-size:13px;padding:5px 8px;width:90px;outline:none;text-align:right}
 input[type=number]:focus{border-color:var(--blue)}
@@ -44,8 +44,8 @@ textarea{width:100%;background:var(--bg);border:1px solid var(--bd);border-radiu
 .save-btn:disabled{opacity:.4;cursor:not-allowed}
 .save-btn:not(:disabled):hover{opacity:.9}
 .toast{display:none;padding:8px 16px;border-radius:8px;font-size:13px}
-.toast.ok{background:rgba(52,199,89,.15);color:var(--green);border:1px solid rgba(52,199,89,.25)}
-.toast.err{background:rgba(195,57,57,.12);color:var(--red);border:1px solid rgba(195,57,57,.2)}
+.toast.ok{background:rgba(34,197,94,.12);color:var(--green-text);border:1px solid rgba(34,197,94,.2)}
+.toast.err{background:rgba(239,68,68,.12);color:var(--red-text);border:1px solid rgba(239,68,68,.2)}
 </style>
 </head>
 <body>

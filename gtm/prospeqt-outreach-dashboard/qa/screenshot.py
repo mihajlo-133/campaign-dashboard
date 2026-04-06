@@ -9,7 +9,6 @@ Usage:
 """
 
 import argparse
-import json
 import subprocess
 import sys
 import time
@@ -19,41 +18,17 @@ from datetime import datetime
 from pathlib import Path
 
 VIEWPORTS = [
-    ("desktop", 1440, 900),
-    ("tablet", 768, 1024),
-    ("mobile", 375, 812),
+    ("desktop", "1440,900"),
+    ("tablet", "768,1024"),
+    ("mobile", "375,812"),
+]
+
+PAGES = [
+    ("dashboard", "/"),
+    ("admin", "/admin"),
 ]
 
 SCREENSHOTS_DIR = Path(__file__).parent / "screenshots"
-
-CAPTURE_SCRIPT_TEMPLATE = """
-const {{ chromium }} = require('playwright');
-
-(async () => {{
-  const browser = await chromium.launch();
-  const context = await browser.newContext({{
-    viewport: {{ width: {width}, height: {height} }},
-    deviceScaleFactor: 2,
-  }});
-  const page = await context.newPage();
-
-  // Dashboard
-  await page.goto('http://localhost:{port}/');
-  await page.waitForTimeout(2000);  // let JS render
-  await page.screenshot({{ path: '{out_path}', fullPage: true }});
-
-  // Admin page (may redirect to login if no ADMIN_PASSWORD)
-  try {{
-    await page.goto('http://localhost:{port}/admin');
-    await page.waitForTimeout(1000);
-    await page.screenshot({{ path: '{admin_out_path}', fullPage: true }});
-  }} catch (e) {{
-    // Admin not accessible — skip
-  }}
-
-  await browser.close();
-}})();
-"""
 
 
 def wait_for_server(port: int, timeout: float = 15.0) -> bool:
@@ -73,67 +48,35 @@ def wait_for_server(port: int, timeout: float = 15.0) -> bool:
 
 
 def capture_screenshots(port: int, prefix: str) -> list[str]:
-    """Capture screenshots at all viewports. Returns list of saved paths."""
+    """Capture screenshots at all viewports for all pages using Playwright CLI."""
     SCREENSHOTS_DIR.mkdir(parents=True, exist_ok=True)
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     saved = []
 
-    for name, width, height in VIEWPORTS:
-        out_path = SCREENSHOTS_DIR / f"{prefix}_{name}_{ts}.png"
-        admin_out_path = SCREENSHOTS_DIR / f"{prefix}_admin_{name}_{ts}.png"
+    for vp_name, vp_size in VIEWPORTS:
+        for page_name, path in PAGES:
+            out_path = SCREENSHOTS_DIR / f"{prefix}_{page_name}_{vp_name}_{ts}.png"
+            url = f"http://localhost:{port}{path}"
 
-        script = CAPTURE_SCRIPT_TEMPLATE.format(
-            width=width,
-            height=height,
-            port=port,
-            out_path=str(out_path).replace("\\", "/"),
-            admin_out_path=str(admin_out_path).replace("\\", "/"),
-        )
-
-        result = subprocess.run(
-            ["npx", "playwright", "test", "--browser", "chromium", "-"],
-            input=script,
-            capture_output=True,
-            text=True,
-            timeout=30,
-        )
-
-        # Fallback: use playwright's screenshot CLI directly if test mode doesn't work
-        if result.returncode != 0:
-            # Use page.screenshot via a node eval with playwright
-            node_script = f"""
-const {{ chromium }} = require('playwright');
-(async () => {{
-  const browser = await chromium.launch();
-  const ctx = await browser.newContext({{ viewport: {{ width: {width}, height: {height} }}, deviceScaleFactor: 2 }});
-  const page = await ctx.newPage();
-  await page.goto('http://localhost:{port}/');
-  await page.waitForTimeout(2000);
-  await page.screenshot({{ path: '{str(out_path).replace(chr(92), "/")}', fullPage: true }});
-  try {{
-    await page.goto('http://localhost:{port}/admin');
-    await page.waitForTimeout(1000);
-    await page.screenshot({{ path: '{str(admin_out_path).replace(chr(92), "/")}', fullPage: true }});
-  }} catch (e) {{}}
-  await browser.close();
-}})();
-"""
-            result2 = subprocess.run(
-                ["node", "-e", node_script],
+            result = subprocess.run(
+                [
+                    "npx", "playwright", "screenshot",
+                    "--viewport-size", vp_size,
+                    "--full-page",
+                    "--wait-for-timeout", "2000",
+                    url,
+                    str(out_path),
+                ],
                 capture_output=True,
                 text=True,
                 timeout=30,
             )
-            if result2.returncode != 0:
-                print(f"  WARN: Failed to capture {name} viewport: {result2.stderr[:200]}")
-                continue
 
-        if out_path.exists():
-            saved.append(str(out_path))
-            print(f"  Saved: {out_path.name}")
-        if admin_out_path.exists():
-            saved.append(str(admin_out_path))
-            print(f"  Saved: {admin_out_path.name}")
+            if result.returncode == 0 and out_path.exists():
+                saved.append(str(out_path))
+                print(f"  Saved: {out_path.name}")
+            else:
+                print(f"  WARN: Failed {page_name} at {vp_name}: {result.stderr[:200]}")
 
     return saved
 
