@@ -212,6 +212,23 @@ tr.expand-row.visible{display:table-row}
   .g-card-right{padding-left:0;min-width:0}
   .g-hero{font-size:22px}
 }
+
+/* Prospeqt tool switcher — shared component across tools */
+.tool-switcher{position:relative;display:inline-flex}
+.tool-switcher-btn{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;padding:0;background:transparent;border:1px solid var(--bd);border-radius:8px;color:var(--tx2);cursor:pointer;transition:all .15s ease}
+.tool-switcher-btn:hover{background:var(--bg-hov);color:var(--tx1);border-color:var(--bd-s)}
+.tool-switcher-btn[aria-expanded="true"]{background:var(--blue-bg);color:var(--blue);border-color:var(--blue)}
+.tool-switcher-menu{position:absolute;top:calc(100% + 8px);right:0;min-width:280px;background:var(--bg-el);border:1px solid var(--bd);border-radius:12px;box-shadow:0 10px 15px -3px rgba(0,0,0,.1),0 4px 6px -4px rgba(0,0,0,.1);padding:6px;z-index:1000;display:none;font-family:'Inter',sans-serif}
+.tool-switcher-menu.is-open{display:block}
+.tool-switcher-header{font-size:11px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.06em;padding:8px 12px 4px}
+.tool-switcher-item{display:block;padding:10px 12px;border-radius:8px;text-decoration:none;position:relative}
+.tool-switcher-item + .tool-switcher-item{margin-top:2px}
+.tool-switcher-item:hover{background:var(--bg-hov)}
+.tool-switcher-item--active,.tool-switcher-item--active:hover{background:var(--blue-bg)}
+.tool-switcher-name{display:block;font-size:13px;font-weight:600;color:var(--tx1);margin-bottom:2px}
+.tool-switcher-item--active .tool-switcher-name{color:var(--blue)}
+.tool-switcher-desc{display:block;font-size:12px;color:var(--tx3);line-height:1.4}
+.tool-switcher-badge{position:absolute;top:10px;right:12px;font-size:9px;font-weight:700;color:var(--blue);background:var(--bg-el);border:1px solid var(--blue);border-radius:4px;padding:2px 6px;text-transform:uppercase;letter-spacing:.06em}
 </style>
 </head>
 <body>
@@ -220,6 +237,27 @@ tr.expand-row.visible{display:table-row}
   <div class="logo"><span class="logo-icon"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C8 7 4 10 4 14a8 8 0 0016 0c0-4-4-7-8-12z" fill="#fff"/></svg></span>Prospeqt</div>
   <span class="topbar-mid" id="ts">--</span>
   <div style="display:flex;align-items:center;gap:8px">
+  <div class="tool-switcher">
+    <button type="button" class="tool-switcher-btn" aria-label="Switch Prospeqt tool" aria-expanded="false" aria-haspopup="menu" onclick="__toggleToolSwitcher(this)">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <div class="tool-switcher-menu" role="menu">
+      <div class="tool-switcher-header">Prospeqt Tools</div>
+      <a href="https://campaign-dashboard-0zra.onrender.com" class="tool-switcher-item tool-switcher-item--active" role="menuitem" aria-current="page">
+        <span class="tool-switcher-name">Campaign Monitor</span>
+        <span class="tool-switcher-desc">Outreach performance across clients</span>
+        <span class="tool-switcher-badge">Current</span>
+      </a>
+      <a href="https://prospeqt-email-qa.onrender.com" class="tool-switcher-item" role="menuitem">
+        <span class="tool-switcher-name">Email QA</span>
+        <span class="tool-switcher-desc">Variable validation before launch</span>
+      </a>
+      <a href="https://spam-checker-gig9.onrender.com" class="tool-switcher-item" role="menuitem">
+        <span class="tool-switcher-name">Spam Checker</span>
+        <span class="tool-switcher-desc">Score copy against spam filters</span>
+      </a>
+    </div>
+  </div>
   <button class="btn" onclick="forceRefresh()" id="refresh-btn">
     <span class="icon-ref">&#x21BB; Refresh</span>
     <span class="spin"></span>
@@ -865,6 +903,10 @@ function forceRefresh(){
 }
 // Clear stale dark theme from localStorage (one-time migration)
 (function(){if(localStorage.getItem('theme'))localStorage.removeItem('theme');})();
+// Prospeqt tool switcher
+function __toggleToolSwitcher(btn){var menu=btn.nextElementSibling;var isOpen=menu.classList.toggle('is-open');btn.setAttribute('aria-expanded',isOpen?'true':'false')}
+document.addEventListener('click',function(e){if(!e.target.closest('.tool-switcher')){document.querySelectorAll('.tool-switcher-menu.is-open').forEach(function(m){m.classList.remove('is-open');var btn=m.parentElement.querySelector('.tool-switcher-btn');if(btn)btn.setAttribute('aria-expanded','false')})}});
+document.addEventListener('keydown',function(e){if(e.key==='Escape'){document.querySelectorAll('.tool-switcher-menu.is-open').forEach(function(m){m.classList.remove('is-open');var btn=m.parentElement.querySelector('.tool-switcher-btn');if(btn)btn.setAttribute('aria-expanded','false')})}});
 fetchAndRender();
 </script>
 </body>

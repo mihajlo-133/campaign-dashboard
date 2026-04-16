@@ -46,11 +46,29 @@ textarea{width:100%;background:var(--bg);border:1px solid var(--bd);border-radiu
 .toast{display:none;padding:8px 16px;border-radius:8px;font-size:13px}
 .toast.ok{background:rgba(34,197,94,.12);color:var(--green-text);border:1px solid rgba(34,197,94,.2)}
 .toast.err{background:rgba(239,68,68,.12);color:var(--red-text);border:1px solid rgba(239,68,68,.2)}
+
+/* Prospeqt tool switcher — shared component across tools */
+.tool-switcher{position:relative;display:inline-flex}
+.tool-switcher-btn{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;padding:0;background:transparent;border:1px solid var(--bd);border-radius:8px;color:var(--tx2);cursor:pointer;transition:all .15s ease}
+.tool-switcher-btn:hover{background:var(--bg-hov);color:var(--tx1);border-color:var(--bd-s)}
+.tool-switcher-btn[aria-expanded="true"]{background:var(--blue-bg);color:var(--blue);border-color:var(--blue)}
+.tool-switcher-menu{position:absolute;top:calc(100% + 8px);right:0;min-width:280px;background:var(--bg-el);border:1px solid var(--bd);border-radius:12px;box-shadow:0 10px 15px -3px rgba(0,0,0,.1),0 4px 6px -4px rgba(0,0,0,.1);padding:6px;z-index:1000;display:none;font-family:'Inter',sans-serif}
+.tool-switcher-menu.is-open{display:block}
+.tool-switcher-header{font-size:11px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.06em;padding:8px 12px 4px}
+.tool-switcher-item{display:block;padding:10px 12px;border-radius:8px;text-decoration:none;position:relative}
+.tool-switcher-item + .tool-switcher-item{margin-top:2px}
+.tool-switcher-item:hover{background:var(--bg-hov)}
+.tool-switcher-item--active,.tool-switcher-item--active:hover{background:var(--blue-bg)}
+.tool-switcher-name{display:block;font-size:13px;font-weight:600;color:var(--tx1);margin-bottom:2px}
+.tool-switcher-item--active .tool-switcher-name{color:var(--blue)}
+.tool-switcher-desc{display:block;font-size:12px;color:var(--tx3);line-height:1.4}
+.tool-switcher-badge{position:absolute;top:10px;right:12px;font-size:9px;font-weight:700;color:var(--blue);background:var(--bg-el);border:1px solid var(--blue);border-radius:4px;padding:2px 6px;text-transform:uppercase;letter-spacing:.06em}
+.topbar-right{display:flex;align-items:center;gap:12px}
 </style>
 </head>
 <body>
 <div class="shell">
-<div class="topbar"><h1>Dashboard Admin</h1><a class="logout" href="/admin/logout">Sign out</a></div>
+<div class="topbar"><h1>Dashboard Admin</h1><div class="topbar-right"><div class="tool-switcher"><button type="button" class="tool-switcher-btn" aria-label="Switch Prospeqt tool" aria-expanded="false" aria-haspopup="menu" onclick="__toggleToolSwitcher(this)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button><div class="tool-switcher-menu" role="menu"><div class="tool-switcher-header">Prospeqt Tools</div><a href="https://campaign-dashboard-0zra.onrender.com" class="tool-switcher-item tool-switcher-item--active" role="menuitem" aria-current="page"><span class="tool-switcher-name">Campaign Monitor</span><span class="tool-switcher-desc">Outreach performance across clients</span><span class="tool-switcher-badge">Current</span></a><a href="https://prospeqt-email-qa.onrender.com" class="tool-switcher-item" role="menuitem"><span class="tool-switcher-name">Email QA</span><span class="tool-switcher-desc">Variable validation before launch</span></a><a href="https://spam-checker-gig9.onrender.com" class="tool-switcher-item" role="menuitem"><span class="tool-switcher-name">Spam Checker</span><span class="tool-switcher-desc">Score copy against spam filters</span></a></div></div><a class="logout" href="/admin/logout">Sign out</a></div></div>
 
 <div class="section">
 <div class="section-title">Global Thresholds</div>
@@ -194,6 +212,10 @@ function exportConfig(){
   document.getElementById('export-txt').value = JSON.stringify(cfg, null, 2);
   document.getElementById('export-area').style.display = 'block';
 }
+// Prospeqt tool switcher
+function __toggleToolSwitcher(btn){var menu=btn.nextElementSibling;var isOpen=menu.classList.toggle('is-open');btn.setAttribute('aria-expanded',isOpen?'true':'false')}
+document.addEventListener('click',function(e){if(!e.target.closest('.tool-switcher')){document.querySelectorAll('.tool-switcher-menu.is-open').forEach(function(m){m.classList.remove('is-open');var btn=m.parentElement.querySelector('.tool-switcher-btn');if(btn)btn.setAttribute('aria-expanded','false')})}});
+document.addEventListener('keydown',function(e){if(e.key==='Escape'){document.querySelectorAll('.tool-switcher-menu.is-open').forEach(function(m){m.classList.remove('is-open');var btn=m.parentElement.querySelector('.tool-switcher-btn');if(btn)btn.setAttribute('aria-expanded','false')})}});
 </script>
 </body>
 </html>
