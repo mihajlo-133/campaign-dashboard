@@ -126,18 +126,39 @@ def send_telegram(html_body: str, totals: dict, today: date) -> None:
     print(f"[OK] Sent report to Telegram chat {chat_id}")
 
 
+USER_AGENT = "RankZeroWeeklyReport/1.0 (+prospeqt.co)"
+RETRY_STATUS = {429, 500, 502, 503, 504}
+MAX_ATTEMPTS = 4
+BACKOFF_BASE = 2.0
+
+
 def _http(method: str, url: str, headers: dict, body: dict | None = None):
     data = json.dumps(body).encode("utf-8") if body is not None else None
-    req = urllib.request.Request(url, data=data, headers=headers, method=method)
-    try:
-        with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
-            return json.loads(r.read())
-    except urllib.error.HTTPError as e:
-        print(f"[HTTP {e.code}] {method} {url}", file=sys.stderr)
-        return None
-    except (urllib.error.URLError, json.JSONDecodeError) as e:
-        print(f"[ERR] {method} {url}: {e}", file=sys.stderr)
-        return None
+    h = {"User-Agent": USER_AGENT, **headers}
+    for attempt in range(1, MAX_ATTEMPTS + 1):
+        req = urllib.request.Request(url, data=data, headers=h, method=method)
+        try:
+            with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
+                return json.loads(r.read())
+        except urllib.error.HTTPError as e:
+            if e.code in RETRY_STATUS and attempt < MAX_ATTEMPTS:
+                wait = BACKOFF_BASE ** attempt
+                print(f"[HTTP {e.code}] {method} {url} — retry {attempt}/{MAX_ATTEMPTS - 1} in {wait:.0f}s", file=sys.stderr)
+                time.sleep(wait)
+                continue
+            print(f"[HTTP {e.code}] {method} {url}", file=sys.stderr)
+            return None
+        except (urllib.error.URLError, TimeoutError) as e:
+            if attempt < MAX_ATTEMPTS:
+                wait = BACKOFF_BASE ** attempt
+                print(f"[ERR] {method} {url}: {e} — retry {attempt}/{MAX_ATTEMPTS - 1} in {wait:.0f}s", file=sys.stderr)
+                time.sleep(wait)
+                continue
+            print(f"[ERR] {method} {url}: {e}", file=sys.stderr)
+            return None
+        except json.JSONDecodeError as e:
+            print(f"[ERR] {method} {url}: {e}", file=sys.stderr)
+            return None
 
 
 def _i(v) -> int:
