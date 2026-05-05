@@ -772,12 +772,16 @@ def fetch_emailbison_data(client_name: str, api_key: str) -> dict:
     avg_opps_7d  = opps_7d / days_in_range if days_in_range > 0 else 0.0
     avg_reply_7d = replies_7d / days_in_range if days_in_range > 0 else 0.0
 
-    # 3. Not-contacted leads — correct filter param is filters[lead_campaign_status]=never_contacted
-    nc_data = _http_get(
-        f"{EB_BASE}/leads?filters%5Blead_campaign_status%5D=never_contacted&page=1", headers
-    ) or {}
-    not_contacted_meta = nc_data.get("meta", {}) if isinstance(nc_data, dict) else {}
-    not_contacted = _safe_num(not_contacted_meta.get("total"))
+    # 3. Not-contacted leads — sum (total_leads - total_leads_contacted) across ACTIVE campaigns.
+    # The workspace-wide /leads?filters[lead_campaign_status]=never_contacted query counts
+    # leads from paused/draft/completed campaigns too, which inflates the number 3-6x.
+    # Per the canonical skill (tools/prospeqt-automation/skills/not-contacted-leads-emailbison):
+    # not_contacted = total_leads - total_leads_contacted, summed across active campaigns only.
+    # Clamp per-campaign to >= 0 to defend against EB data quirks where contacted > total.
+    not_contacted = sum(
+        max(0, _safe_num(c.get("total_leads")) - _safe_num(c.get("total_leads_contacted")))
+        for c in active_campaigns
+    )
 
     # Reply rates
     reply_rate_today = (replies_today / sent_today * 100) if sent_today > 0 else 0.0
@@ -806,6 +810,9 @@ def fetch_emailbison_data(client_name: str, api_key: str) -> dict:
         camp_replies = _safe_num(camp_today.get("replied"))
         camp_opps = _safe_num(camp_today.get("interested"))
         camp_bounced = _safe_num(camp_today.get("bounced"))
+        camp_total_leads = _safe_num(c.get("total_leads"))
+        camp_contacted = _safe_num(c.get("total_leads_contacted"))
+        camp_not_contacted = max(0, camp_total_leads - camp_contacted)
         return {
             "name":          c.get("name", "Unknown"),
             "id":            cid,
@@ -816,8 +823,8 @@ def fetch_emailbison_data(client_name: str, api_key: str) -> dict:
             "replies_today": camp_replies,
             "opps_today":    camp_opps,
             "reply_rate":    round(camp_replies / camp_sent * 100, 2) if camp_sent > 0 else 0.0,
-            "not_contacted": 0,  # Not available per-campaign in EB
-            "in_progress":   0,
+            "not_contacted": camp_not_contacted,
+            "in_progress":   max(0, camp_contacted - camp_bounced),
             "total_sent":    0,
             "total_bounced": camp_bounced,
         }
@@ -1228,11 +1235,10 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         if self.path == "/api/refresh":
-            # Invalidate cache AND clear stale data so clients see "Loading..."
+            # Invalidate timestamps so background fetches run immediately,
+            # but keep existing data so clients don't flash "Loading..." skeletons.
             with _cache_lock:
                 _cache_ts.clear()
-                _cache_data.clear()
-                _cache_errors.clear()
             # Kick off immediate re-fetch via bounded thread pool
             for name in CLIENTS:
                 _backfill_pool.submit(_fetch_client, name)

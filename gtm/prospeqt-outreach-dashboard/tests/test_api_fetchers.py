@@ -251,7 +251,8 @@ class TestFetchEmailBisonData:
 
     def test_basic_parsing(self, monkeypatch):
         campaigns = [
-            {"id": 1, "name": "EB Camp", "status": "Active"},
+            {"id": 1, "name": "EB Camp", "status": "Active",
+             "total_leads": 1000, "total_leads_contacted": 800},
         ]
         stats_7d = [
             {"label": "Sent", "dates": [["2026-03-26", 100], ["2026-03-27", 110]]},
@@ -265,7 +266,7 @@ class TestFetchEmailBisonData:
             {"label": "Interested", "dates": [[TODAY_STR, 1]]},
         ]
 
-        self._patch_http(monkeypatch, campaigns=campaigns, stats_7d=stats_7d, stats_today=stats_today, nc_total=200)
+        self._patch_http(monkeypatch, campaigns=campaigns, stats_7d=stats_7d, stats_today=stats_today)
 
         result = server.fetch_emailbison_data("TestClient", "fake-key")
 
@@ -274,6 +275,7 @@ class TestFetchEmailBisonData:
         assert result["sent_today"] == 50
         assert result["replies_today"] == 2
         assert result["opps_today"] == 1
+        # not_contacted = total_leads(1000) - total_leads_contacted(800) = 200
         assert result["not_contacted"] == 200
         assert isinstance(result["campaigns"], list)
 
@@ -350,6 +352,90 @@ class TestFetchEmailBisonData:
             assert "replies" not in camp
             assert "bounced" not in camp
             assert "opps" not in camp
+
+    def test_not_contacted_excludes_paused_campaigns(self, monkeypatch):
+        """not_contacted must sum ACTIVE campaigns only — paused/draft excluded.
+
+        Regression test for the RankZero bug: workspace-wide /leads filter was
+        leaking in 18 paused campaigns (~10k extra leads), inflating the count.
+        """
+        campaigns = [
+            # 4 active campaigns — should count
+            {"id": 95, "name": "Active 1", "status": "Active",
+             "total_leads": 6692, "total_leads_contacted": 4051},  # nc = 2641
+            {"id": 96, "name": "Active 2", "status": "Active",
+             "total_leads": 1177, "total_leads_contacted": 1080},  # nc = 97
+            {"id": 97, "name": "Active 3", "status": "Active",
+             "total_leads": 2837, "total_leads_contacted": 2153},  # nc = 684
+            {"id": 98, "name": "Active 4", "status": "Active",
+             "total_leads": 2431, "total_leads_contacted": 1638},  # nc = 793
+            # Paused campaigns — must be ignored
+            {"id": 22, "name": "Paused Big", "status": "Paused",
+             "total_leads": 25680, "total_leads_contacted": 19365},  # would add 6315
+            {"id": 24, "name": "Paused Med", "status": "Paused",
+             "total_leads": 13633, "total_leads_contacted": 10768},  # would add 2865
+            # Draft campaign — must be ignored
+            {"id": 83, "name": "Draft", "status": "Draft",
+             "total_leads": 1, "total_leads_contacted": 0},  # would add 1
+        ]
+        self._patch_http(monkeypatch, campaigns=campaigns)
+
+        result = server.fetch_emailbison_data("TestClient", "fake-key")
+
+        # Active-only sum: 2641 + 97 + 684 + 793 = 4215
+        assert result["not_contacted"] == 4215
+        assert result["active_campaigns"] == 4
+        assert result["total_campaigns"] == 7
+
+    def test_not_contacted_clamps_negative_to_zero(self, monkeypatch):
+        """EmailBison data quirk: total_leads_contacted can exceed total_leads.
+
+        Per the canonical skill, per-campaign values can be negative; for the
+        dashboard summary we clamp each campaign to >= 0 so the total stays sane.
+        """
+        campaigns = [
+            {"id": 1, "name": "Healthy", "status": "Active",
+             "total_leads": 1000, "total_leads_contacted": 600},  # nc = 400
+            {"id": 2, "name": "Quirk", "status": "Active",
+             "total_leads": 500, "total_leads_contacted": 700},  # raw = -200, clamped = 0
+        ]
+        self._patch_http(monkeypatch, campaigns=campaigns)
+
+        result = server.fetch_emailbison_data("TestClient", "fake-key")
+
+        # 400 + max(0, -200) = 400, NOT 200
+        assert result["not_contacted"] == 400
+
+    def test_not_contacted_per_campaign_populated(self, monkeypatch):
+        """Per-campaign not_contacted should be filled in (was hardcoded to 0)."""
+        campaigns = [
+            {"id": 1, "name": "Camp A", "status": "Active",
+             "total_leads": 500, "total_leads_contacted": 300},  # nc = 200
+            {"id": 2, "name": "Camp B", "status": "Active",
+             "total_leads": 100, "total_leads_contacted": 100},  # nc = 0
+        ]
+        self._patch_http(monkeypatch, campaigns=campaigns)
+
+        result = server.fetch_emailbison_data("TestClient", "fake-key")
+
+        nc_by_id = {c["id"]: c["not_contacted"] for c in result["campaigns"]}
+        assert nc_by_id[1] == 200
+        assert nc_by_id[2] == 0
+
+    def test_not_contacted_status_case_insensitive(self, monkeypatch):
+        """Status comparison must handle both 'Active' and 'active' (EB returns lowercase)."""
+        campaigns = [
+            {"id": 1, "name": "Lower", "status": "active",
+             "total_leads": 500, "total_leads_contacted": 100},  # nc = 400
+            {"id": 2, "name": "Upper", "status": "Active",
+             "total_leads": 300, "total_leads_contacted": 50},   # nc = 250
+        ]
+        self._patch_http(monkeypatch, campaigns=campaigns)
+
+        result = server.fetch_emailbison_data("TestClient", "fake-key")
+
+        assert result["not_contacted"] == 650
+        assert result["active_campaigns"] == 2
 
 
 class TestEbParseEventsTimeseries:
