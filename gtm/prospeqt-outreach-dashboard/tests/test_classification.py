@@ -48,10 +48,10 @@ class TestPoolDaysRemaining:
 
 
 class TestClassifyClient:
-    """Test _classify_client using factory defaults (no config file)."""
+    """Test _classify_client using factory defaults (pool_days_red=1, pool_days_warn=3)."""
 
     def _make_data(self, **overrides):
-        """Create a baseline healthy client data dict."""
+        """Create a baseline healthy client data dict (10d runway, low bounce)."""
         base = {
             "active_campaigns": 3,
             "total_campaigns": 5,
@@ -62,7 +62,7 @@ class TestClassifyClient:
             "reply_rate_today": 2.0,
             "reply_rate_7d": 1.8,
             "bounce_rate": 0.5,
-            "not_contacted": 20000,
+            "not_contacted": 20000,  # 10 days runway at 2000/day
         }
         base.update(overrides)
         return base
@@ -75,48 +75,69 @@ class TestClassifyClient:
         data = self._make_data(active_campaigns=0)
         assert server._classify_client(data, "MyPlace") == "amber"
 
-    def test_zero_sent_with_active_campaigns_is_red(self):
-        data = self._make_data(sent_today=0)
+    # --- Runway is the primary signal ---
+
+    def test_runway_below_one_day_is_red(self):
+        # not_contacted=1500, sent=2000 → 0.75 days runway → red
+        data = self._make_data(not_contacted=1500)
         assert server._classify_client(data, "MyPlace") == "red"
 
-    def test_sent_below_red_threshold(self):
-        # MyPlace KPI sent=2000, sent_pct_red=0.5 → need <1000 for red
-        data = self._make_data(sent_today=900)
-        assert server._classify_client(data, "MyPlace") == "red"
-
-    def test_sent_below_warn_threshold(self):
-        # sent_pct_warn=0.8 → need <1600 for amber
-        data = self._make_data(sent_today=1500)
+    def test_runway_between_one_and_three_days_is_amber(self):
+        # not_contacted=4000, sent=2000 → 2 days runway → amber
+        data = self._make_data(not_contacted=4000)
         assert server._classify_client(data, "MyPlace") == "amber"
 
-    def test_high_bounce_rate_is_red(self):
+    def test_runway_at_three_days_is_green(self):
+        # not_contacted=6000, sent=2000 → exactly 3 days → green (boundary, not <3)
+        data = self._make_data(not_contacted=6000)
+        assert server._classify_client(data, "MyPlace") == "green"
+
+    def test_runway_above_three_days_is_green(self):
+        # not_contacted=14000, sent=2000 → 7 days runway → green
+        data = self._make_data(not_contacted=14000)
+        assert server._classify_client(data, "MyPlace") == "green"
+
+    # --- Regression: zero sent + active campaigns no longer auto-reds when runway is healthy ---
+
+    def test_zero_sent_today_with_healthy_runway_is_green(self):
+        # HeyReach/Enavra case: 0 sent today but 7d avg is healthy + plenty of leads → green
+        data = self._make_data(sent_today=0, avg_sent_7d=1300, not_contacted=10000)
+        # runway = 10000 / 1300 ≈ 7.7 days → green
+        assert server._classify_client(data, "MyPlace") == "green"
+
+    def test_low_send_kpi_with_healthy_runway_is_green(self):
+        # SmartMatchApp case: only 122 sent today (vs 2000 KPI) but 47d runway → green
+        # not_contacted=5841, sent=122 → ~47.9 days → green (no longer red just because KPI low)
+        data = self._make_data(sent_today=122, avg_sent_7d=200, not_contacted=5841)
+        assert server._classify_client(data, "MyPlace") == "green"
+
+    # --- Bounce rate is still a separate signal ---
+
+    def test_high_bounce_rate_is_red_even_with_healthy_runway(self):
         data = self._make_data(bounce_rate=6.0)
         assert server._classify_client(data, "MyPlace") == "red"
 
-    def test_moderate_bounce_rate_is_amber(self):
+    def test_moderate_bounce_rate_with_healthy_runway_is_amber(self):
         data = self._make_data(bounce_rate=4.0)
         assert server._classify_client(data, "MyPlace") == "amber"
 
-    def test_low_reply_rate_is_red(self):
-        # reply_rate_red=0.5, need >50 sent for check to apply
-        data = self._make_data(sent_today=2000, replies_today=5, reply_rate_today=0.25)
+    def test_high_bounce_rate_overrides_amber_runway(self):
+        # Even at 2 days runway, 6% bounce is still red, not amber
+        data = self._make_data(not_contacted=4000, bounce_rate=6.0)
         assert server._classify_client(data, "MyPlace") == "red"
 
-    def test_low_reply_rate_is_amber(self):
-        data = self._make_data(sent_today=2000, replies_today=15, reply_rate_today=0.75)
-        assert server._classify_client(data, "MyPlace") == "amber"
+    # --- Reply rate and KPI ratios no longer drive RAG (regression guards) ---
 
-    def test_low_pool_days_is_red(self):
-        # pool_days_red=3, sent_today=2000 → need <6000 not_contacted for red
-        data = self._make_data(not_contacted=4000)
-        # 4000/2000 = 2 days < 3 → red
-        assert server._classify_client(data, "MyPlace") == "red"
+    def test_low_reply_rate_with_healthy_runway_is_green(self):
+        # Reply rate is shown in the card but no longer drives classification
+        data = self._make_data(reply_rate_today=0.1)
+        assert server._classify_client(data, "MyPlace") == "green"
 
-    def test_low_pool_days_is_amber(self):
-        # pool_days_warn=7 → need <14000 not_contacted for amber (at 2000/day)
-        data = self._make_data(not_contacted=10000)
-        # 10000/2000 = 5 days < 7 → amber
-        assert server._classify_client(data, "MyPlace") == "amber"
+    def test_below_kpi_send_with_healthy_runway_is_green(self):
+        # 50% of KPI used to be red — now it's green if runway is fine
+        data = self._make_data(sent_today=900)
+        # 20000/900 = 22 days → green
+        assert server._classify_client(data, "MyPlace") == "green"
 
 
 class TestSafeNum:

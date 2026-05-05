@@ -40,8 +40,8 @@ def mock_config():
             "bounce_rate_warn": 3.0,
             "bounce_rate_red": 5.0,
             "opps_pct_warn": 0.5,
-            "pool_days_warn": 7,
-            "pool_days_red": 3,
+            "pool_days_warn": 3,
+            "pool_days_red": 1,
         },
         "clients": {
             "TestClient": {

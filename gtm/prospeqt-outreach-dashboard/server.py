@@ -63,8 +63,9 @@ BOUNCE_RATE_WARN  = 3.0   # pct — above this → amber
 BOUNCE_RATE_RED   = 5.0   # pct — above this → red
 OPPS_PCT_WARN     = 0.5   # fraction of 7-day avg → amber if today drops below 50%
 # Lead pool capacity thresholds are in days (not_contacted / avg_daily_sent)
-POOL_DAYS_RED     = 3     # below 3 days of leads → red
-POOL_DAYS_WARN    = 7     # below 7 days of leads → amber
+# Runway is the primary RAG signal: more days of leads = more breathing room.
+POOL_DAYS_RED     = 1     # below 1 day of leads → red (urgent — fill leads today)
+POOL_DAYS_WARN    = 3     # below 3 days of leads → amber (watch — fill this week)
 
 # Factory defaults — used as fallback when no config file or env var is present
 FACTORY_THRESHOLDS = {
@@ -907,48 +908,38 @@ def _pool_days_remaining(data: dict, client_name: str) -> float:
 
 
 def _classify_client(data: dict, client_name: str) -> str:
-    """Classify a client's status: 'green', 'amber', or 'red'."""
-    kpi = get_client_kpi(client_name)
-    t = get_client_thresholds(client_name)
-    sent_kpi = kpi.get("sent", 0)
+    """Classify a client's status: 'green', 'amber', or 'red'.
 
-    # No campaigns running → amber
+    Runway (lead pool days remaining) is the primary signal. The intuition: if
+    you have many days of leads queued, you have leeway to plan replenishment;
+    if you're under a day, you must act today.
+
+    - red:   < pool_days_red   days of runway (default <1d), OR critical bounce rate
+    - amber: < pool_days_warn  days of runway (default <3d), OR no active campaigns,
+                               OR moderate bounce rate on otherwise healthy runway
+    - green: everything else
+    """
+    t = get_client_thresholds(client_name)
+
+    # No campaigns running but some exist → amber (watch — nothing actively sending)
     if data.get("active_campaigns", 0) == 0 and data.get("total_campaigns", 0) > 0:
         return "amber"
 
-    # Zero sent today when campaigns are active → red
-    sent_today = data.get("sent_today", 0)
-    if data.get("active_campaigns", 0) > 0 and sent_today == 0:
-        return "red"
-
-    # Sent well below KPI → red or amber
-    if sent_kpi > 0:
-        sent_ratio = sent_today / sent_kpi
-        if sent_ratio < t["sent_pct_red"]:
-            return "red"
-        if sent_ratio < t["sent_pct_warn"]:
-            return "amber"
-
-    # Reply rate (only classify if meaningful sample)
-    rr = data.get("reply_rate_today", 0)
-    if sent_today > 50:
-        if rr < t["reply_rate_red"]:
-            return "red"
-        if rr < t["reply_rate_warn"]:
-            return "amber"
-
-    # Bounce rate
+    # Critical bounce rate is a data quality emergency — overrides runway
+    # (runway is misleading if your sends are bouncing).
     br = data.get("bounce_rate", 0)
     if br > t["bounce_rate_red"]:
         return "red"
-    if br > t["bounce_rate_warn"]:
-        return "amber"
 
-    # Lead pool runway (days remaining)
+    # Primary classifier: lead pool runway in days
     pool_days = _pool_days_remaining(data, client_name)
     if pool_days < t["pool_days_red"]:
         return "red"
     if pool_days < t["pool_days_warn"]:
+        return "amber"
+
+    # Healthy runway — moderate bounce still warrants amber as a soft warning
+    if br > t["bounce_rate_warn"]:
         return "amber"
 
     return "green"

@@ -38,7 +38,7 @@
       {"date": "2026-04-01", "sent": 1800, "opps": 5, "replies": 42}
     ],
     "kpi": {"sent": 2000, "not_contacted": 1000, "opps_per_day": 4.0, "reply_rate": 1.5},
-    "thresholds": {"reply_rate_warn": 1.0, "reply_rate_red": 0.5, "sent_pct_warn": 0.8, "sent_pct_red": 0.5, "bounce_rate_warn": 3.0, "bounce_rate_red": 5.0, "opps_pct_warn": 0.5, "pool_days_warn": 7, "pool_days_red": 3},
+    "thresholds": {"reply_rate_warn": 1.0, "reply_rate_red": 0.5, "sent_pct_warn": 0.8, "sent_pct_red": 0.5, "bounce_rate_warn": 3.0, "bounce_rate_red": 5.0, "opps_pct_warn": 0.5, "pool_days_warn": 3, "pool_days_red": 1},
     "fetched_at": "2026-04-01T10:00:00+00:00"
   },
   "SwishFunding": {
@@ -79,7 +79,7 @@
       {"date": "2026-04-01", "sent": 6500, "opps": 6, "replies": 52}
     ],
     "kpi": {"sent": 10000, "not_contacted": 10000, "opps_per_day": 9.0, "reply_rate": 1.3},
-    "thresholds": {"reply_rate_warn": 1.0, "reply_rate_red": 0.5, "sent_pct_warn": 0.8, "sent_pct_red": 0.5, "bounce_rate_warn": 3.0, "bounce_rate_red": 5.0, "opps_pct_warn": 0.5, "pool_days_warn": 7, "pool_days_red": 3},
+    "thresholds": {"reply_rate_warn": 1.0, "reply_rate_red": 0.5, "sent_pct_warn": 0.8, "sent_pct_red": 0.5, "bounce_rate_warn": 3.0, "bounce_rate_red": 5.0, "opps_pct_warn": 0.5, "pool_days_warn": 3, "pool_days_red": 1},
     "fetched_at": "2026-04-01T10:00:00+00:00"
   },
   "SmartMatchApp": {
@@ -117,7 +117,7 @@
       {"date": "2026-04-01", "sent": 200, "opps": 0, "replies": 1}
     ],
     "kpi": {"sent": 2000, "not_contacted": 2000, "opps_per_day": 2.0, "reply_rate": 1.5},
-    "thresholds": {"reply_rate_warn": 1.0, "reply_rate_red": 0.5, "sent_pct_warn": 0.8, "sent_pct_red": 0.5, "bounce_rate_warn": 3.0, "bounce_rate_red": 5.0, "opps_pct_warn": 0.5, "pool_days_warn": 7, "pool_days_red": 3},
+    "thresholds": {"reply_rate_warn": 1.0, "reply_rate_red": 0.5, "sent_pct_warn": 0.8, "sent_pct_red": 0.5, "bounce_rate_warn": 3.0, "bounce_rate_red": 5.0, "opps_pct_warn": 0.5, "pool_days_warn": 3, "pool_days_red": 1},
     "fetched_at": "2026-04-01T10:00:00+00:00"
   },
   "HeyReach": {
@@ -156,7 +156,7 @@
       {"date": "2026-04-01", "sent": 1600, "opps": 3, "replies": 30}
     ],
     "kpi": {"sent": 2000, "not_contacted": 2000, "opps_per_day": 2.0, "reply_rate": 1.5},
-    "thresholds": {"reply_rate_warn": 1.0, "reply_rate_red": 0.5, "sent_pct_warn": 0.8, "sent_pct_red": 0.5, "bounce_rate_warn": 3.0, "bounce_rate_red": 5.0, "opps_pct_warn": 0.5, "pool_days_warn": 7, "pool_days_red": 3},
+    "thresholds": {"reply_rate_warn": 1.0, "reply_rate_red": 0.5, "sent_pct_warn": 0.8, "sent_pct_red": 0.5, "bounce_rate_warn": 3.0, "bounce_rate_red": 5.0, "opps_pct_warn": 0.5, "pool_days_warn": 3, "pool_days_red": 1},
     "fetched_at": "2026-04-01T10:00:00+00:00"
   },
   "Kayse": {
@@ -184,7 +184,7 @@
     "campaigns": [],
     "daily": [],
     "kpi": {"sent": 2000, "not_contacted": 2000, "opps_per_day": 2.0, "reply_rate": 1.5},
-    "thresholds": {"reply_rate_warn": 1.0, "reply_rate_red": 0.5, "sent_pct_warn": 0.8, "sent_pct_red": 0.5, "bounce_rate_warn": 3.0, "bounce_rate_red": 5.0, "opps_pct_warn": 0.5, "pool_days_warn": 7, "pool_days_red": 3},
+    "thresholds": {"reply_rate_warn": 1.0, "reply_rate_red": 0.5, "sent_pct_warn": 0.8, "sent_pct_red": 0.5, "bounce_rate_warn": 3.0, "bounce_rate_red": 5.0, "opps_pct_warn": 0.5, "pool_days_warn": 3, "pool_days_red": 1},
     "fetched_at": "2026-04-01T10:00:00+00:00"
   },
   "Prosperly": {
@@ -212,7 +212,7 @@
     "campaigns": [],
     "daily": [],
     "kpi": {"sent": 2000, "not_contacted": 2000, "opps_per_day": 2.0, "reply_rate": 1.5},
-    "thresholds": {"reply_rate_warn": 1.0, "reply_rate_red": 0.5, "sent_pct_warn": 0.8, "sent_pct_red": 0.5, "bounce_rate_warn": 3.0, "bounce_rate_red": 5.0, "opps_pct_warn": 0.5, "pool_days_warn": 7, "pool_days_red": 3},
+    "thresholds": {"reply_rate_warn": 1.0, "reply_rate_red": 0.5, "sent_pct_warn": 0.8, "sent_pct_red": 0.5, "bounce_rate_warn": 3.0, "bounce_rate_red": 5.0, "opps_pct_warn": 0.5, "pool_days_warn": 3, "pool_days_red": 1},
     "fetched_at": "2026-04-01T10:00:00+00:00"
   },
   "Enavra": {
@@ -240,7 +240,7 @@
     "campaigns": [],
     "daily": [],
     "kpi": {"sent": 2000, "not_contacted": 2000, "opps_per_day": 2.0, "reply_rate": 1.5},
-    "thresholds": {"reply_rate_warn": 1.0, "reply_rate_red": 0.5, "sent_pct_warn": 0.8, "sent_pct_red": 0.5, "bounce_rate_warn": 3.0, "bounce_rate_red": 5.0, "opps_pct_warn": 0.5, "pool_days_warn": 7, "pool_days_red": 3},
+    "thresholds": {"reply_rate_warn": 1.0, "reply_rate_red": 0.5, "sent_pct_warn": 0.8, "sent_pct_red": 0.5, "bounce_rate_warn": 3.0, "bounce_rate_red": 5.0, "opps_pct_warn": 0.5, "pool_days_warn": 3, "pool_days_red": 1},
     "fetched_at": "2026-04-01T10:00:00+00:00"
   },
   "RankZero": {
@@ -271,7 +271,7 @@
     ],
     "daily": [],
     "kpi": {"sent": 2000, "not_contacted": 2000, "opps_per_day": 2.0, "reply_rate": 1.5},
-    "thresholds": {"reply_rate_warn": 1.0, "reply_rate_red": 0.5, "sent_pct_warn": 0.8, "sent_pct_red": 0.5, "bounce_rate_warn": 3.0, "bounce_rate_red": 5.0, "opps_pct_warn": 0.5, "pool_days_warn": 7, "pool_days_red": 3},
+    "thresholds": {"reply_rate_warn": 1.0, "reply_rate_red": 0.5, "sent_pct_warn": 0.8, "sent_pct_red": 0.5, "bounce_rate_warn": 3.0, "bounce_rate_red": 5.0, "opps_pct_warn": 0.5, "pool_days_warn": 3, "pool_days_red": 1},
     "fetched_at": "2026-04-01T10:00:00+00:00"
   },
   "SwishFunding (EB)": {
@@ -301,7 +301,7 @@
     ],
     "daily": [],
     "kpi": {"sent": 2000, "not_contacted": 2000, "opps_per_day": 2.0, "reply_rate": 1.5},
-    "thresholds": {"reply_rate_warn": 1.0, "reply_rate_red": 0.5, "sent_pct_warn": 0.8, "sent_pct_red": 0.5, "bounce_rate_warn": 3.0, "bounce_rate_red": 5.0, "opps_pct_warn": 0.5, "pool_days_warn": 7, "pool_days_red": 3},
+    "thresholds": {"reply_rate_warn": 1.0, "reply_rate_red": 0.5, "sent_pct_warn": 0.8, "sent_pct_red": 0.5, "bounce_rate_warn": 3.0, "bounce_rate_red": 5.0, "opps_pct_warn": 0.5, "pool_days_warn": 3, "pool_days_red": 1},
     "fetched_at": "2026-04-01T10:00:00+00:00"
   }
 }
